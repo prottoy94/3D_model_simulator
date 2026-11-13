@@ -1,0 +1,80 @@
+# ── Dependencies ─────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.pnp
+.pnp.*
+
+# ── Build output and generated files ─────────────────────────
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# ── Secrets: never commit API keys ───────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── AI result cache and eval reports (generated, can cost money to rebuild) ──
+.cache/
+evals/reports/
+
+# ── Test output ──────────────────────────────────────────────
+coverage/
+test-results/
+playwright-report/
+blob-report/
+**/__screenshots__/*-actual.png
+**/__screenshots__/*-diff.png
+
+# ── Notebooks and model files ────────────────────────────────
+# Raw notebooks are large (embedded images) and may be private.
+# Only stripped copies under fixtures/notebooks/ are committed.
+*.ipynb
+!fixtures/notebooks/*.ipynb
+.ipynb_checkpoints/
+fixtures/**/raw/
+
+# Trained weights and exported models
+*.pt
+*.pth
+*.onnx
+*.h5
+*.keras
+*.safetensors
+*.ckpt
+
+# ── Python (optional tools/zoo-export scripts) ───────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Claude Code: machine-specific files ──────────────────────
+.claude/launch.json
+.claude/settings.local.json
+.claude/worktrees/
+
+# ── Editors and OS ───────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Deploy ───────────────────────────────────────────────────
+.vercel/

@@ -1,0 +1,113 @@
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@theme inline {
+  --color-void: var(--bg-void);
+  --color-deep: var(--bg-deep);
+  --color-glass-1: var(--glass-1);
+  --color-glass-2: var(--glass-2);
+  --color-line: var(--glass-border);
+  --color-line-strong: var(--glass-border-strong);
+  --color-text-1: var(--text-1);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-error: var(--error);
+  --color-frozen: var(--frozen);
+  --color-op-io: var(--op-io);
+  --color-op-conv: var(--op-conv);
+  --color-op-pool: var(--op-pool);
+  --color-op-norm: var(--op-norm);
+  --color-op-act: var(--op-act);
+  --color-op-linear: var(--op-linear);
+  --color-op-attn: var(--op-attn);
+  --color-op-recur: var(--op-recur);
+  --color-op-shape: var(--op-shape);
+  --color-op-merge: var(--op-merge);
+  --color-op-reg: var(--op-reg);
+  --color-op-det: var(--op-det);
+  --color-op-classic: var(--op-classic);
+  --color-op-custom: var(--op-custom);
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-space-grotesk);
+  --font-mono: var(--font-jetbrains-mono);
+  --radius-panel: 14px;
+  --radius-control: 8px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-1);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 14px;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* HUD label: small uppercase display text used for panel titles and readouts. */
+.hud-label {
+  font-family: var(--font-space-grotesk), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.glass {
+  background: var(--glass-1);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: var(--shadow-panel);
+}
+
+/* Thin scrollbars that match the glass panels. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--glass-border-strong) transparent;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes frame-charge {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

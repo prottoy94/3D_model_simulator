@@ -1,0 +1,54 @@
+/* Design tokens: the only place raw color values live (see docs/06-UI-UX-DESIGN.md). */
+:root {
+  /* space */
+  --bg-void: #03050a;
+  --bg-deep: #070b14;
+  --grid-line: rgba(90, 140, 255, 0.06);
+
+  /* glass */
+  --glass-1: rgba(12, 18, 34, 0.62);
+  --glass-2: rgba(20, 28, 50, 0.78);
+  --glass-border: rgba(130, 190, 255, 0.14);
+  --glass-border-strong: rgba(130, 190, 255, 0.28);
+  --glass-highlight: linear-gradient(
+    135deg,
+    rgba(120, 220, 255, 0.35),
+    rgba(232, 121, 249, 0.12) 40%,
+    transparent 70%
+  );
+
+  /* text */
+  --text-1: #e8f1ff;
+  --text-2: #9db0cc;
+  --text-3: #6b7d9c;
+
+  /* brand + state */
+  --accent: #22d3ee;
+  --accent-2: #e879f9;
+  --ok: #a3e635;
+  --warn: #fbbf24;
+  --error: #fb7185;
+  --frozen: #93c5fd;
+
+  /* operation families: shared by 3D, 2D, chips and the timeline */
+  --op-io: #cbd5e1;
+  --op-conv: #22d3ee;
+  --op-pool: #a78bfa;
+  --op-norm: #2dd4bf;
+  --op-act: #a3e635;
+  --op-linear: #fbbf24;
+  --op-attn: #e879f9;
+  --op-recur: #38bdf8;
+  --op-shape: #94a3b8;
+  --op-merge: #f8fafc;
+  --op-reg: #64748b;
+  --op-det: #fb923c;
+  --op-classic: #facc15;
+  --op-custom: #fb7185;
+
+  /* shape */
+  --radius-panel: 14px;
+  --radius-control: 8px;
+  --shadow-panel: 0 0 0 1px var(--glass-border), 0 8px 40px rgba(0, 0, 0, 0.45);
+  --glow-accent: 0 0 0 1px rgba(34, 211, 238, 0.5), 0 0 24px rgba(34, 211, 238, 0.25);
+}
