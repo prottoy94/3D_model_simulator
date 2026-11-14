@@ -1,34 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { NeonButton } from "@/components/ui";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { OpenNotebookButton } from "@/features/shell/open-notebook-button";
 import { cn } from "@/lib/cn";
-
-type DropState =
-  | { kind: "idle" }
-  | { kind: "accepted"; name: string; sizeMb: string }
-  | { kind: "rejected"; reason: string };
+import { useProjectStore } from "@/stores/project-store";
 
 /**
- * Notebook drop target. In Phase 0 it only validates the file type; Phase 1
- * wires it to the ingest pipeline. The file never leaves the browser here.
+ * Notebook drop target on the landing page. The file is parsed and analyzed in
+ * the browser, then the Scope workspace opens. Nothing is uploaded.
  */
 export function DropZone() {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [dragging, setDragging] = useState(false);
-  const [state, setState] = useState<DropState>({ kind: "idle" });
+  const openFile = useProjectStore((state) => state.openFile);
+  const status = useProjectStore((state) => state.status);
+  const error = useProjectStore((state) => state.error);
 
-  const handleFile = (file: File | undefined) => {
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".ipynb")) {
-      setState({ kind: "rejected", reason: `"${file.name}" is not a .ipynb notebook.` });
-      return;
-    }
-    setState({
-      kind: "accepted",
-      name: file.name,
-      sizeMb: (file.size / (1024 * 1024)).toFixed(1),
-    });
+  const handleFile = async (file: File | undefined) => {
+    if (file && (await openFile(file))) router.push("/scope");
   };
 
   return (
@@ -41,7 +31,7 @@ export function DropZone() {
       onDrop={(event) => {
         event.preventDefault();
         setDragging(false);
-        handleFile(event.dataTransfer.files[0]);
+        void handleFile(event.dataTransfer.files[0]);
       }}
       className={cn(
         "glass relative w-full max-w-xl rounded-panel p-[1.5px] transition-shadow duration-200",
@@ -70,25 +60,20 @@ export function DropZone() {
             model
           </p>
         </div>
-        <NeonButton variant="primary" onClick={() => inputRef.current?.click()}>
-          Choose a notebook
-        </NeonButton>
-        <input
-          ref={inputRef}
-          type="file"
-          accept=".ipynb"
-          className="sr-only"
-          aria-label="Choose a notebook file"
-          onChange={(event) => handleFile(event.target.files?.[0])}
+        <OpenNotebookButton
+          label="Choose a notebook"
+          variant="primary"
+          size="md"
+          onOpened={() => router.push("/scope")}
         />
         <p aria-live="polite" className="min-h-5 text-xs">
-          {state.kind === "accepted" ? (
-            <span className="text-ok">
-              {state.name} ({state.sizeMb} MB) recognized. Notebook analysis is not built yet: it
-              arrives in Phase 1.
+          {status === "loading" ? <span className="text-text-2">Reading the notebook…</span> : null}
+          {status === "error" && error ? <span className="text-error">{error}</span> : null}
+          {status !== "loading" && status !== "error" ? (
+            <span className="text-text-3">
+              The file is read in your browser. Nothing is uploaded.
             </span>
           ) : null}
-          {state.kind === "rejected" ? <span className="text-error">{state.reason}</span> : null}
         </p>
       </div>
     </div>

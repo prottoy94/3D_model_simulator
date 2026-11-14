@@ -1,0 +1,843 @@
+{
+  "irVersion": "1.0",
+  "scope": "notebook",
+  "title": "Mini Vision Transformer",
+  "summary": "A small ViT built from scratch: the image is cut into 196 patches of 16×16, each becomes a 64-number token, and four Transformer blocks let the tokens exchange information before a pooled classifier head.",
+  "framework": "keras",
+  "domain": "cv",
+  "task": "classification",
+  "symbols": [
+    {
+      "name": "IMG_HEIGHT",
+      "value": "224",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "IMG_WIDTH",
+      "value": "224",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "PATCH_SIZE",
+      "value": "16",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "NUM_PATCHES",
+      "value": "196",
+      "provenance": "computed",
+      "ref": null,
+      "note": "(IMG_HEIGHT // PATCH_SIZE) ** 2"
+    },
+    {
+      "name": "PROJECTION_DIM",
+      "value": "64",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "NUM_HEADS",
+      "value": "4",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "MLP_DIM",
+      "value": "128",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "TRANSFORMER_LAYERS",
+      "value": "4",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "num_classes",
+      "value": "8",
+      "provenance": "from-output",
+      "ref": null,
+      "note": "len(class_names); the notebook reports 8 classes"
+    }
+  ],
+  "models": [
+    {
+      "id": "m_vit",
+      "name": "ViT_scratch",
+      "description": "Mini Vision Transformer trained from scratch",
+      "rootGroupId": "g_vit",
+      "inputNodeIds": [
+        "n_in"
+      ],
+      "outputNodeIds": [
+        "n_out"
+      ],
+      "isPrimary": true,
+      "variantOf": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "g_vit",
+      "parentId": null,
+      "modelId": "m_vit",
+      "label": "ViT_scratch",
+      "kind": "model",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 61,
+          "endLine": 80,
+          "role": "definition"
+        },
+        {
+          "cell": 16,
+          "startLine": 83,
+          "endLine": 83,
+          "role": "call"
+        }
+      ],
+      "description": "Mini Vision Transformer trained from scratch"
+    },
+    {
+      "id": "g_patch_encoder",
+      "parentId": "g_vit",
+      "modelId": "m_vit",
+      "label": "PatchEncoder",
+      "kind": "module",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 66,
+          "endLine": 66,
+          "role": "call"
+        },
+        {
+          "cell": 16,
+          "startLine": 23,
+          "endLine": 36,
+          "role": "definition"
+        }
+      ],
+      "description": "Projects each patch to 64 numbers and adds a learned position embedding."
+    },
+    {
+      "id": "g_blocks",
+      "parentId": "g_vit",
+      "modelId": "m_vit",
+      "label": "Transformer block",
+      "kind": "repeat",
+      "repeatCount": null,
+      "repeatSymbol": "TRANSFORMER_LAYERS",
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 68,
+          "endLine": 69,
+          "role": "loop"
+        },
+        {
+          "cell": 16,
+          "startLine": 39,
+          "endLine": 58,
+          "role": "definition"
+        }
+      ],
+      "description": "Pre-norm encoder block: LayerNorm → attention → add, then LayerNorm → MLP (GELU) → add."
+    },
+    {
+      "id": "g_head",
+      "parentId": "g_vit",
+      "modelId": "m_vit",
+      "label": "Classifier",
+      "kind": "head",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [],
+      "description": ""
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n_in",
+      "groupId": "g_vit",
+      "op": "input",
+      "customOpName": null,
+      "label": "Input 224×224×3",
+      "params": [
+        {
+          "key": "shape",
+          "value": [
+            224,
+            224,
+            3
+          ]
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 63,
+          "endLine": 63,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_patches",
+      "groupId": "g_vit",
+      "op": "patchify",
+      "customOpName": "Patches",
+      "label": "Patches 16×16",
+      "params": [
+        {
+          "key": "patch",
+          "value": "PATCH_SIZE"
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 65,
+          "endLine": 65,
+          "role": "apply"
+        },
+        {
+          "cell": 16,
+          "startLine": 1,
+          "endLine": 20,
+          "role": "definition"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_proj",
+      "groupId": "g_patch_encoder",
+      "op": "patch_embed",
+      "customOpName": null,
+      "label": "Patch projection → 64",
+      "params": [
+        {
+          "key": "dim",
+          "value": "PROJECTION_DIM"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 30,
+          "endLine": 30,
+          "role": "declare"
+        },
+        {
+          "cell": 16,
+          "startLine": 35,
+          "endLine": 35,
+          "role": "apply"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_pos",
+      "groupId": "g_patch_encoder",
+      "op": "pos_embed",
+      "customOpName": null,
+      "label": "Position embedding",
+      "params": [
+        {
+          "key": "length",
+          "value": "NUM_PATCHES"
+        },
+        {
+          "key": "dim",
+          "value": "PROJECTION_DIM"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 31,
+          "endLine": 31,
+          "role": "declare"
+        },
+        {
+          "cell": 16,
+          "startLine": 34,
+          "endLine": 35,
+          "role": "apply"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_ln1",
+      "groupId": "g_blocks",
+      "op": "layernorm",
+      "customOpName": null,
+      "label": "LayerNorm",
+      "params": [
+        {
+          "key": "epsilon",
+          "value": 0.000001
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 44,
+          "endLine": 44,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_mha",
+      "groupId": "g_blocks",
+      "op": "multi_head_attention",
+      "customOpName": null,
+      "label": "Attention · 4 heads",
+      "params": [
+        {
+          "key": "numHeads",
+          "value": "NUM_HEADS"
+        },
+        {
+          "key": "keyDim",
+          "value": "PROJECTION_DIM"
+        },
+        {
+          "key": "dropout",
+          "value": 0.1
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 45,
+          "endLine": 47,
+          "role": "declare"
+        }
+      ],
+      "explanation": "Each of the 196 patch tokens attends to every other. key_dim=64 is per head, so the attention space is 256 wide.",
+      "confidence": "high"
+    },
+    {
+      "id": "n_add1",
+      "groupId": "g_blocks",
+      "op": "add",
+      "customOpName": null,
+      "label": "Add (residual)",
+      "params": [],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 48,
+          "endLine": 48,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_ln2",
+      "groupId": "g_blocks",
+      "op": "layernorm",
+      "customOpName": null,
+      "label": "LayerNorm",
+      "params": [
+        {
+          "key": "epsilon",
+          "value": 0.000001
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 51,
+          "endLine": 51,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_mlp1",
+      "groupId": "g_blocks",
+      "op": "dense",
+      "customOpName": null,
+      "label": "MLP Dense 128 · GELU",
+      "params": [
+        {
+          "key": "units",
+          "value": "MLP_DIM"
+        },
+        {
+          "key": "activation",
+          "value": "gelu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 52,
+          "endLine": 52,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_mlp_drop1",
+      "groupId": "g_blocks",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.1",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.1
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 53,
+          "endLine": 53,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_mlp2",
+      "groupId": "g_blocks",
+      "op": "dense",
+      "customOpName": null,
+      "label": "MLP Dense 64",
+      "params": [
+        {
+          "key": "units",
+          "value": "PROJECTION_DIM"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 54,
+          "endLine": 54,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_mlp_drop2",
+      "groupId": "g_blocks",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.1",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.1
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 55,
+          "endLine": 55,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_add2",
+      "groupId": "g_blocks",
+      "op": "add",
+      "customOpName": null,
+      "label": "Add (residual)",
+      "params": [],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 56,
+          "endLine": 56,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_ln_out",
+      "groupId": "g_head",
+      "op": "layernorm",
+      "customOpName": null,
+      "label": "LayerNorm",
+      "params": [
+        {
+          "key": "epsilon",
+          "value": 0.000001
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 71,
+          "endLine": 71,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_gap",
+      "groupId": "g_head",
+      "op": "global_avg_pool",
+      "customOpName": null,
+      "label": "Average over tokens",
+      "params": [],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 72,
+          "endLine": 72,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_drop1",
+      "groupId": "g_head",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.3",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.3
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 73,
+          "endLine": 73,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_fc1",
+      "groupId": "g_head",
+      "op": "dense",
+      "customOpName": null,
+      "label": "Dense 128 · GELU",
+      "params": [
+        {
+          "key": "units",
+          "value": 128
+        },
+        {
+          "key": "activation",
+          "value": "gelu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 75,
+          "endLine": 75,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_drop2",
+      "groupId": "g_head",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.3",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.3
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 76,
+          "endLine": 76,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_out",
+      "groupId": "g_head",
+      "op": "dense",
+      "customOpName": null,
+      "label": "Dense 8 · softmax",
+      "params": [
+        {
+          "key": "units",
+          "value": "num_classes"
+        },
+        {
+          "key": "activation",
+          "value": "softmax"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 16,
+          "startLine": 77,
+          "endLine": 77,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "n_in",
+      "to": "n_patches",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e2",
+      "from": "n_patches",
+      "to": "n_proj",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e3",
+      "from": "n_proj",
+      "to": "n_pos",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e4",
+      "from": "n_pos",
+      "to": "n_ln1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e5",
+      "from": "n_ln1",
+      "to": "n_mha",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e6",
+      "from": "n_ln1",
+      "to": "n_mha",
+      "toPort": 1,
+      "kind": "data"
+    },
+    {
+      "id": "e7",
+      "from": "n_mha",
+      "to": "n_add1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e8",
+      "from": "n_pos",
+      "to": "n_add1",
+      "toPort": 1,
+      "kind": "residual"
+    },
+    {
+      "id": "e9",
+      "from": "n_add1",
+      "to": "n_ln2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e10",
+      "from": "n_ln2",
+      "to": "n_mlp1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e11",
+      "from": "n_mlp1",
+      "to": "n_mlp_drop1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e12",
+      "from": "n_mlp_drop1",
+      "to": "n_mlp2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e13",
+      "from": "n_mlp2",
+      "to": "n_mlp_drop2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e14",
+      "from": "n_mlp_drop2",
+      "to": "n_add2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e15",
+      "from": "n_add1",
+      "to": "n_add2",
+      "toPort": 1,
+      "kind": "residual"
+    },
+    {
+      "id": "e16",
+      "from": "n_add2",
+      "to": "n_ln_out",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e17",
+      "from": "n_ln_out",
+      "to": "n_gap",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e18",
+      "from": "n_gap",
+      "to": "n_drop1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e19",
+      "from": "n_drop1",
+      "to": "n_fc1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e20",
+      "from": "n_fc1",
+      "to": "n_drop2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e21",
+      "from": "n_drop2",
+      "to": "n_out",
+      "toPort": 0,
+      "kind": "data"
+    }
+  ],
+  "pipelines": [],
+  "training": null,
+  "warnings": []
+}

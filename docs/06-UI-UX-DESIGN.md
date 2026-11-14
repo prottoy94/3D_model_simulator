@@ -21,12 +21,12 @@ encodes an operation family, and light moves only when data moves.
 ```css
 :root {
   /* space */
-  --bg-void:        #03050A;   /* page background */
-  --bg-deep:        #070B14;   /* viewport base */
+  --bg-void:        #000000;   /* page background */
+  --bg-deep:        #000000;   /* viewport base */
   --grid-line:      rgba(90, 140, 255, 0.06);
   /* glass */
-  --glass-1:        rgba(12, 18, 34, 0.62);   /* panels (with backdrop-filter: blur(18px) saturate(140%)) */
-  --glass-2:        rgba(20, 28, 50, 0.78);   /* raised / popovers */
+  --glass-1:        rgba(1, 2, 5, 0.8);      /* panels (with backdrop-filter: blur(18px) saturate(140%)) */
+  --glass-2:        rgba(4, 6, 12, 0.9);      /* raised / popovers */
   --glass-border:   rgba(130, 190, 255, 0.14);
   --glass-highlight: linear-gradient(135deg, rgba(120,220,255,.35), rgba(232,121,249,.12) 40%, transparent 70%);
   /* text */
@@ -58,8 +58,9 @@ encodes an operation family, and light moves only when data moves.
 ### Typography
 | Role | Font | Use |
 |---|---|---|
-| Display | **Space Grotesk** 500–700, letter-spacing +0.02em, uppercase for HUD labels | Brand, panel titles, mode switch |
-| UI / body | **Inter** 400–600 | Everything readable |
+| Brand | **Michroma** 400, wide tracking | The wordmark only |
+| Display | **Chakra Petch** 500–700, uppercase with wide tracking for HUD labels | Headings, panel titles, mode switch |
+| UI / body | **Exo 2** 400–600 | Everything readable |
 | Mono | **JetBrains Mono** 400–500, tabular numbers | Code, shapes (`54×54×96`), params, telemetry |
 
 Scale: 11 / 12 / 13 / 14 / 16 / 20 / 28 / 40 px. The UI is dense, so the default body size is 13–14 px.

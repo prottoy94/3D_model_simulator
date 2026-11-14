@@ -29,10 +29,10 @@ export default function LandingPage() {
 
       <header className="relative z-10 flex h-14 items-center justify-between px-6">
         <span className="flex items-center gap-2">
-          <span aria-hidden className="text-lg text-accent">
+          <span aria-hidden className="text-2xl leading-none text-accent">
             ◈
           </span>
-          <span className="font-display text-sm font-bold tracking-[0.22em]">NEUROSCOPE</span>
+          <span className="font-brand text-[13px] font-bold tracking-[0.28em]">NEUROSCOPE</span>
         </span>
         <nav className="flex items-center gap-5 text-sm text-text-2">
           <Link href="/scope" className="transition-colors hover:text-text-1">
@@ -46,7 +46,7 @@ export default function LandingPage() {
 
       <main className="relative z-10 flex flex-1 flex-col items-center px-4 pb-16 pt-[8vh]">
         <p className="hud-label !text-accent">3D model simulator</p>
-        <h1 className="mt-3 max-w-3xl text-balance text-center font-display text-4xl font-bold leading-tight tracking-tight text-text-1 sm:text-5xl">
+        <h1 className="mt-3 max-w-3xl text-balance text-center font-display text-4xl font-bold uppercase leading-tight tracking-[0.04em] text-text-1 sm:text-6xl">
           Watch your model think.
         </h1>
         <p className="mt-4 max-w-xl text-pretty text-center text-base leading-relaxed text-text-2">

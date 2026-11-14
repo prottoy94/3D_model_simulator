@@ -1,5 +1,47 @@
 # 05 — AI Pipeline (Claude Fable 5.2)
 
+> **Superseded in part by ADR-013 (2026-11-14): the AI layer is provider-neutral.** The user has
+> no Claude API key. The app must work with free-tier keys for Gemini, Groq, Qwen (Alibaba Model
+> Studio) and OpenRouter, with Claude as an optional extra. Read §0 first. The rest of this doc
+> describes the Claude adapter and the task design (prompts, slicing, repair loop, caching), which
+> still apply to every provider.
+
+## 0. Providers (ADR-013)
+
+| Provider | Env key | API style | Notes |
+|---|---|---|---|
+| `gemini` (default) | `GOOGLE_API_KEY` | Google Gemini API | Long context, schema-constrained JSON |
+| `groq` | `GROQ_API_KEY` | OpenAI-compatible | Fast; smaller context and tight per-minute token limits |
+| `qwen` | `DASHSCOPE_API_KEY`, `DASHSCOPE_BASE_URL` | OpenAI-compatible (Responses API, `enable_thinking`) | Models the user named: `qwen3.8-max`, `qwen3.8-flash`. 1M free tokens, then it stops |
+| `openrouter` | `OPENROUTER_API_KEY` | OpenAI-compatible | **Free models only** (`:free` ids with zero pricing) |
+| `anthropic` (optional) | `ANTHROPIC_API_KEY` | Anthropic SDK | Everything from §2 onwards |
+
+Rules:
+- One interface, `AiProvider { id; listModels(); generateJson(task, schema, messages, onProgress) }`,
+  in `src/server/ai/providers/<id>.ts`. Tasks, prompts, the context slicer, the cache and the
+  verify → repair loop are shared and never mention a provider.
+- **The user picks the provider and model in the app** (a settings popover in the top bar,
+  remembered locally). Only providers whose key is set are offered. `AI_PROVIDER` in `.env.local`
+  is the default. If a call fails with a rate-limit or quota error, the app offers the next
+  configured provider instead of switching silently.
+- **Model lists are loaded live** from each provider's models endpoint and filtered, not
+  hard-coded: free tiers and model names change often. For OpenRouter, keep only ids ending in
+  `:free` with zero pricing, and prefer those that support `structured_outputs` and have a
+  context of 250k tokens or more. On 2026-11-14 that shortlist was `particle-ai/particle-1:free`,
+  `baidu/ernie-5.5-flash-preview:free`, `nvidia/nemotron-3.5-super-vl:free` and
+  `google/gemma-4-31b-it:free` (JSON mode only).
+- **Structured output is best effort.** Use the provider's schema-constrained JSON when it has
+  one, plain JSON mode otherwise, and always re-validate with the Wire IR Zod schema. A parse
+  failure counts as one repair round.
+- **Keys:** `.env.local` only (git-ignored), read only in `src/server/**`, never `NEXT_PUBLIC_`.
+  `.env.example` is the committed template and holds no values.
+- **Privacy:** free tiers may use prompts for training. The first-run notice names the selected
+  provider and says so. Local-only mode stays available.
+- **Budget:** free tiers cost nothing, but they are rate limited. Show the token estimate before a
+  run, and track the Qwen free-token balance so the user does not hit paid usage by accident.
+- Verify each provider's SDK or endpoint details from its current docs when implementing Phase 4.
+  Nothing above about limits or model names has been tested yet.
+
 > **Before you implement anything in this doc, load the `claude-api` skill** and verify each SDK
 > call against it. The snippets below use patterns documented there (as of 2026-11), but the
 > exact *combination* of features in one request (streaming + structured outputs + server-side

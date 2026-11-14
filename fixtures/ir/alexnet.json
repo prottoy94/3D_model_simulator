@@ -1,0 +1,785 @@
+{
+  "irVersion": "1.0",
+  "scope": "notebook",
+  "title": "AlexNet",
+  "summary": "AlexNet (2012) with BatchNorm in place of local response normalization: five convolutions, then three dense layers. Built from scratch for 8 classes.",
+  "framework": "keras",
+  "domain": "cv",
+  "task": "classification",
+  "symbols": [
+    {
+      "name": "IMG_HEIGHT",
+      "value": "224",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "IMG_WIDTH",
+      "value": "224",
+      "provenance": "literal",
+      "ref": null,
+      "note": ""
+    },
+    {
+      "name": "num_classes",
+      "value": "8",
+      "provenance": "from-output",
+      "ref": null,
+      "note": "len(class_names); the notebook reports 8 classes"
+    }
+  ],
+  "models": [
+    {
+      "id": "m_alexnet",
+      "name": "AlexNet",
+      "description": "AlexNet adapted with BatchNorm, trained from scratch",
+      "rootGroupId": "g_alexnet",
+      "inputNodeIds": [
+        "n_in"
+      ],
+      "outputNodeIds": [
+        "n_fc3"
+      ],
+      "isPrimary": true,
+      "variantOf": null
+    }
+  ],
+  "groups": [
+    {
+      "id": "g_alexnet",
+      "parentId": null,
+      "modelId": "m_alexnet",
+      "label": "AlexNet",
+      "kind": "model",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 1,
+          "endLine": 37,
+          "role": "definition"
+        },
+        {
+          "cell": 14,
+          "startLine": 40,
+          "endLine": 40,
+          "role": "call"
+        }
+      ],
+      "description": "AlexNet adapted with BatchNorm, trained from scratch"
+    },
+    {
+      "id": "g_block1",
+      "parentId": "g_alexnet",
+      "modelId": "m_alexnet",
+      "label": "Conv block 1",
+      "kind": "stage",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [],
+      "description": ""
+    },
+    {
+      "id": "g_block2",
+      "parentId": "g_alexnet",
+      "modelId": "m_alexnet",
+      "label": "Conv block 2",
+      "kind": "stage",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [],
+      "description": ""
+    },
+    {
+      "id": "g_block3",
+      "parentId": "g_alexnet",
+      "modelId": "m_alexnet",
+      "label": "Conv block 3",
+      "kind": "stage",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [],
+      "description": ""
+    },
+    {
+      "id": "g_head",
+      "parentId": "g_alexnet",
+      "modelId": "m_alexnet",
+      "label": "Classifier",
+      "kind": "head",
+      "repeatCount": null,
+      "repeatSymbol": null,
+      "zooKey": null,
+      "zooArgs": [],
+      "refs": [],
+      "description": ""
+    }
+  ],
+  "nodes": [
+    {
+      "id": "n_in",
+      "groupId": "g_alexnet",
+      "op": "input",
+      "customOpName": null,
+      "label": "Input 224×224×3",
+      "params": [
+        {
+          "key": "shape",
+          "value": [
+            224,
+            224,
+            3
+          ]
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 12,
+          "endLine": 12,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_conv1",
+      "groupId": "g_block1",
+      "op": "conv2d",
+      "customOpName": null,
+      "label": "Conv 1 · 96@11×11 /4",
+      "params": [
+        {
+          "key": "filters",
+          "value": 96
+        },
+        {
+          "key": "kernel",
+          "value": [
+            11,
+            11
+          ]
+        },
+        {
+          "key": "padding",
+          "value": "valid"
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        },
+        {
+          "key": "stride",
+          "value": [
+            4,
+            4
+          ]
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 12,
+          "endLine": 12,
+          "role": "declare"
+        }
+      ],
+      "explanation": "Large 11×11 filters with stride 4 shrink the image fast while detecting coarse patterns.",
+      "confidence": "high"
+    },
+    {
+      "id": "n_bn1",
+      "groupId": "g_block1",
+      "op": "batchnorm",
+      "customOpName": null,
+      "label": "BatchNorm 1",
+      "params": [],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 13,
+          "endLine": 13,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_pool1",
+      "groupId": "g_block1",
+      "op": "maxpool2d",
+      "customOpName": null,
+      "label": "MaxPool 3×3 /2",
+      "params": [
+        {
+          "key": "pool",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "stride",
+          "value": [
+            2,
+            2
+          ]
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 14,
+          "endLine": 14,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_conv2",
+      "groupId": "g_block2",
+      "op": "conv2d",
+      "customOpName": null,
+      "label": "Conv 2 · 256@5×5",
+      "params": [
+        {
+          "key": "filters",
+          "value": 256
+        },
+        {
+          "key": "kernel",
+          "value": [
+            5,
+            5
+          ]
+        },
+        {
+          "key": "padding",
+          "value": "same"
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 17,
+          "endLine": 17,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_bn2",
+      "groupId": "g_block2",
+      "op": "batchnorm",
+      "customOpName": null,
+      "label": "BatchNorm 2",
+      "params": [],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 18,
+          "endLine": 18,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_pool2",
+      "groupId": "g_block2",
+      "op": "maxpool2d",
+      "customOpName": null,
+      "label": "MaxPool 3×3 /2",
+      "params": [
+        {
+          "key": "pool",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "stride",
+          "value": [
+            2,
+            2
+          ]
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 19,
+          "endLine": 19,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_conv3",
+      "groupId": "g_block3",
+      "op": "conv2d",
+      "customOpName": null,
+      "label": "Conv 3 · 384@3×3",
+      "params": [
+        {
+          "key": "filters",
+          "value": 384
+        },
+        {
+          "key": "kernel",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "padding",
+          "value": "same"
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 23,
+          "endLine": 23,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_conv4",
+      "groupId": "g_block3",
+      "op": "conv2d",
+      "customOpName": null,
+      "label": "Conv 4 · 384@3×3",
+      "params": [
+        {
+          "key": "filters",
+          "value": 384
+        },
+        {
+          "key": "kernel",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "padding",
+          "value": "same"
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 24,
+          "endLine": 24,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_conv5",
+      "groupId": "g_block3",
+      "op": "conv2d",
+      "customOpName": null,
+      "label": "Conv 5 · 256@3×3",
+      "params": [
+        {
+          "key": "filters",
+          "value": 256
+        },
+        {
+          "key": "kernel",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "padding",
+          "value": "same"
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 25,
+          "endLine": 25,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_pool3",
+      "groupId": "g_block3",
+      "op": "maxpool2d",
+      "customOpName": null,
+      "label": "MaxPool 3×3 /2",
+      "params": [
+        {
+          "key": "pool",
+          "value": [
+            3,
+            3
+          ]
+        },
+        {
+          "key": "stride",
+          "value": [
+            2,
+            2
+          ]
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 26,
+          "endLine": 26,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_flatten",
+      "groupId": "g_head",
+      "op": "flatten",
+      "customOpName": null,
+      "label": "Flatten",
+      "params": [],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 29,
+          "endLine": 29,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_fc1",
+      "groupId": "g_head",
+      "op": "dense",
+      "customOpName": null,
+      "label": "Dense 4096",
+      "params": [
+        {
+          "key": "units",
+          "value": 4096
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 30,
+          "endLine": 30,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_drop1",
+      "groupId": "g_head",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.5",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.5
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 31,
+          "endLine": 31,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_fc2",
+      "groupId": "g_head",
+      "op": "dense",
+      "customOpName": null,
+      "label": "Dense 4096",
+      "params": [
+        {
+          "key": "units",
+          "value": 4096
+        },
+        {
+          "key": "activation",
+          "value": "relu"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 32,
+          "endLine": 32,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_drop2",
+      "groupId": "g_head",
+      "op": "dropout",
+      "customOpName": null,
+      "label": "Dropout 0.5",
+      "params": [
+        {
+          "key": "rate",
+          "value": 0.5
+        }
+      ],
+      "trainable": "n/a",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 33,
+          "endLine": 33,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    },
+    {
+      "id": "n_fc3",
+      "groupId": "g_head",
+      "op": "dense",
+      "customOpName": null,
+      "label": "Dense 8 · softmax",
+      "params": [
+        {
+          "key": "units",
+          "value": "num_classes"
+        },
+        {
+          "key": "activation",
+          "value": "softmax"
+        }
+      ],
+      "trainable": "yes",
+      "claimedOutputShape": null,
+      "refs": [
+        {
+          "cell": 14,
+          "startLine": 34,
+          "endLine": 34,
+          "role": "declare"
+        }
+      ],
+      "explanation": "",
+      "confidence": "high"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "n_in",
+      "to": "n_conv1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e2",
+      "from": "n_conv1",
+      "to": "n_bn1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e3",
+      "from": "n_bn1",
+      "to": "n_pool1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e4",
+      "from": "n_pool1",
+      "to": "n_conv2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e5",
+      "from": "n_conv2",
+      "to": "n_bn2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e6",
+      "from": "n_bn2",
+      "to": "n_pool2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e7",
+      "from": "n_pool2",
+      "to": "n_conv3",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e8",
+      "from": "n_conv3",
+      "to": "n_conv4",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e9",
+      "from": "n_conv4",
+      "to": "n_conv5",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e10",
+      "from": "n_conv5",
+      "to": "n_pool3",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e11",
+      "from": "n_pool3",
+      "to": "n_flatten",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e12",
+      "from": "n_flatten",
+      "to": "n_fc1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e13",
+      "from": "n_fc1",
+      "to": "n_drop1",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e14",
+      "from": "n_drop1",
+      "to": "n_fc2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e15",
+      "from": "n_fc2",
+      "to": "n_drop2",
+      "toPort": 0,
+      "kind": "data"
+    },
+    {
+      "id": "e16",
+      "from": "n_drop2",
+      "to": "n_fc3",
+      "toPort": 0,
+      "kind": "data"
+    }
+  ],
+  "pipelines": [],
+  "training": null,
+  "warnings": []
+}

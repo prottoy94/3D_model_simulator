@@ -6,18 +6,26 @@
 
 ## Status
 
-- **Phase 0 is done (2026-11-13), except Playwright (deferred to Phase 3). Next: Phase 1** in
-  [docs/08-ROADMAP.md](docs/08-ROADMAP.md). What exists: Next.js 16.4.6 app, design tokens, fonts,
-  UI primitives, landing page (drop zone validates the file type only), Scope shell with resizable
-  rails and an empty R3F viewport, a Forge placeholder, and `src/core/format` with tests.
-  Nothing is committed yet.
+- **Phases 0, 1 and 2 are done (2026-11-14). Next: Phase 3** (3D and 2D visualization) in
+  [docs/08-ROADMAP.md](docs/08-ROADMAP.md). Phase 2 added the Wire/Runtime IR (`src/core/ir`), the
+  op catalog (`src/core/ops`), the shape engine and summary verification (`src/core/shapes`) and
+  the no-AI reader for simple layer stacks (`src/core/fastpath`). `buildRuntimeIR(wire, { summaries })`
+  is the one entry point from Wire IR to everything a view needs. What works now: drop a notebook → it is parsed and
+  stripped in the browser, every cell gets a role, constants are resolved, saved `model.summary()`
+  outputs are parsed, and Scope shows the Notebook Map, the code (Monaco) and a notebook inspector.
+  No AI and no 3D model yet. Playwright is deferred to Phase 3.
+- Phases 1 and 2 are not committed yet (Phase 0 is commit `82e988f`).
+- Notebook fixtures are local and git-ignored (ADR-011). Scripts are ESM: `scripts/*.mts`, run with `tsx`.
 - **Next 16 has breaking changes** (`cacheComponents` is on; `LayoutProps` types come from
   `next typegen`). Read `node_modules/next/dist/docs/` before writing Next code.
 - react-resizable-panels is v4: `Group` / `Panel` / `Separator`, sizes as strings (`"22%"`).
 - **Machine:** Windows 11, PowerShell. Git 2.45, Node 24.20 (winget, user scope) and pnpm 12.18 are
   installed. In Git Bash, Node may be missing from PATH: call `pnpm.cmd` from the winget Node folder. Python 3.11 is installed but only optional tooling uses it.
-- Build sessions are meant to run in Claude Code on **Claude Fable 5.2**. The app's own AI engine is
-  also Fable 5.2 (`claude-fable-5-2`).
+- Build sessions run in Claude Code on **Claude Fable 5.2**. The app's own AI engine is
+  **provider-neutral** (ADR-013): Gemini (default), Groq, Qwen and OpenRouter free models, chosen by
+  the user in the app; Claude is optional. The user has no Claude API key.
+- API keys live in `.env.local` (git-ignored). `.env.example` is the committed template. Never
+  print, log or commit key values.
 
 ## What we are building
 
@@ -67,7 +75,7 @@ plotting and evaluation cells are classified and shown dimmed in the Notebook Ma
    opt-in, local-only tracer is a far-later idea; see ADR-002.)
 4. **`src/core/**` is pure TypeScript.** No React, no DOM, no Node-only APIs, no network. It must be
    unit-testable with Vitest in isolation.
-5. **The API key stays on the server.** Only `src/server/**` talks to Anthropic, and every file there
+5. **API keys stay on the server.** Only `src/server/**` talks to AI providers, and every file there
    starts with `import "server-only"`. Never use a `NEXT_PUBLIC_` prefix for secrets.
 6. **Line-number fidelity.** Any transformation of notebook code (stripping `!pip`, `%magic`, etc.)
    must preserve line numbers, because every IR `CodeRef` points at `(cell, startLine, endLine)`.
@@ -86,7 +94,7 @@ plotting and evaluation cells are classified and shown dimmed in the Notebook Ma
 - **App:** Next.js (App Router) + React + TypeScript `strict`, using one Next.js app (no monorepo). The `src/core`
   boundary is enforced by lint rules.
 - **UI:** Tailwind CSS v4, Radix primitives (shadcn/ui as a starting point, fully re-skinned),
-  `motion` (Framer Motion), `cmdk` command palette. Fonts via `next/font`: Space Grotesk, Inter, JetBrains Mono.
+  `motion` (Framer Motion), `cmdk` command palette. Fonts via `next/font`: Michroma (brand), Chakra Petch (display), Exo 2 (body), JetBrains Mono.
 - **3D:** `@react-three/fiber`, `@react-three/drei`, `@react-three/postprocessing` (bloom), instancing.
 - **2D graph:** `@xyflow/react` + `elkjs` layout.
 - **Code:** `@monaco-editor/react`, plus `web-tree-sitter` with the Python grammar (WASM) for static analysis.
@@ -94,7 +102,7 @@ plotting and evaluation cells are classified and shown dimmed in the Notebook Ma
   resolution. There is a symbolic fallback for very large models. Check that tfjs is still maintained
   at scaffold time (ADR-007).
 - **State and data:** Zustand (+ immer) and Zod. Dexie (IndexedDB) stores local projects and caches. There is no server DB in v1.
-- **AI:** `@anthropic-ai/sdk`, server-side only, model `claude-fable-5-2`.
+- **AI:** server-side only, one adapter per provider behind an `AiProvider` interface (doc 05 §0).
 - **Tests:** Vitest (core), React Testing Library, Playwright (e2e + screenshot regression), and an AI eval harness.
 - Use the latest stable versions at scaffold time, recorded in `package.json`. Do not guess versions in code or docs.
 
@@ -107,6 +115,9 @@ pnpm lint           # eslint (includes the core-boundary rule)
 pnpm typecheck      # next typegen && tsc --noEmit
 pnpm test           # vitest (src/**/*.test.ts)
 pnpm format         # prettier
+pnpm make-fixture <notebook.ipynb> <short-name>    # stripped local test copy
+pnpm build-ir-fixtures                             # regenerate fixtures/ir/*.json from src/core/ir/examples.ts
+pnpm tsx scripts/inspect-notebook.mts <file>       # print roles, constants, summaries
 # planned: pnpm test:e2e (playwright), pnpm eval:ai (COSTS MONEY: ask the user first)
 ```
 
@@ -120,6 +131,7 @@ src/core/python/         tree-sitter wrapper, symbol table, line-preserving sani
 src/core/ir/             Zod schemas (wire + runtime), normalize, validate, patch
 src/core/ops/            op catalog (one file per op family)
 src/core/shapes/         shape / param / FLOP engine + verification against summaries
+src/core/fastpath/       no-AI reader for Keras Sequential / nn.Sequential
 src/core/zoo/            pretrained backbone templates (JSON) + resolver
 src/core/layout/         3D + 2D layout, collapse / LOD
 src/core/sim/            sim plan compiler, clock, tensor backends (tfjs, symbolic)
@@ -135,7 +147,9 @@ fixtures/                stripped test notebooks + expected facts (golden tests)
 tools/zoo-export/        optional Python scripts that export pretrained graphs → IR JSON
 ```
 
-## Claude API rules (Fable 5.2)
+## Claude API rules (only for the optional `anthropic` adapter)
+
+For Gemini, Groq, Qwen and OpenRouter, read doc 05 §0 and check the provider's current docs.
 
 Load the `claude-api` skill before writing or changing any code that calls Claude, and verify
 SDK calls against it instead of relying on memory. Project specifics are in

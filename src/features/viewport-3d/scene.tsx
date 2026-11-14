@@ -36,11 +36,11 @@ export default function Scene() {
         infiniteGrid
         cellSize={1}
         sectionSize={5}
-        cellThickness={0.6}
-        sectionThickness={0.8}
+        cellThickness={0.45}
+        sectionThickness={0.7}
         cellColor={colors.grid}
         sectionColor={colors.accent}
-        fadeDistance={55}
+        fadeDistance={42}
         fadeStrength={2.2}
         position={[0, -0.01, 0]}
       />

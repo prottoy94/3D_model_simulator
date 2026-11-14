@@ -138,6 +138,19 @@ type WireIR = {
 
 ### Conventions
 
+- **As built (Phase 2):** `inferShape` throws `ShapeError` instead of returning a union. Catalog
+  entries also carry `signatures` (constructor argument → canonical key, used by the fast path) and
+  an optional `declared` flag (`custom`, `backbone`: shape and counts come from params and stay
+  "unverified" unless a saved summary agrees).
+- **TimeDistributed:** any node may carry the param `timeDistributed: true`. The engine then
+  applies the op per item along axis 1 (`(B, R, 7, 7, 128)` → Flatten → `(B, R, 6272)`). There is
+  no separate `time_distributed` op.
+- **Run-time sizes:** an `input` shape entry of `-1` is a symbolic dim named by `dynamicDim`
+  (e.g. `"R"` for RoIs).
+- **Symbols in params:** a string param value equal to a symbol name is replaced by that symbol's
+  value. A node's `customOpName` may also name the user's class when it maps to a known op
+  (`Patches` → `patchify`); verification uses it to match summary rows.
+
 - **ids:** `m_*` models, `g_*` groups, `n_*` nodes, `e_*` edges, `p_*` pipelines. They are unique
   across the whole IR.
 - **Repeats:** a `repeat` group contains **one canonical instance** of the block's nodes.

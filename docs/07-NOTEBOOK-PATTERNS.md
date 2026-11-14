@@ -145,11 +145,17 @@ All values come from the notebooks' own saved outputs (`model.summary()` / print
 Computed check for the regressor: the backbone (896 + 18,496 + 73,856) + Dense 128 (1,048,704)
 + Dense 4 (516) = 1,142,468.
 
-## 5. Fixture plan
+## 5. Fixtures (as built in Phase 1)
 
-- `scripts/make-fixture.ts` (Phase 1) reads a notebook path, strips image and widget outputs,
-  keeps code, markdown and text outputs, and writes `fixtures/notebooks/<short-name>.ipynb`.
-  **Ask the user before copying their notebooks into the repo.**
-- `fixtures/expectations/<short-name>.json` encodes §4 as machine-checkable assertions.
-- Parser fixtures: capture raw Keras 3 summary outputs (with ANSI) from N1, N4 and N5 as
-  separate `.txt` test inputs for the summary parser.
+- `pnpm make-fixture <notebook.ipynb> <short-name>` strips image and widget outputs, keeps code,
+  markdown and text outputs, and writes `fixtures/notebooks/<short-name>.ipynb`. These copies are
+  **git-ignored**: they contain the notebooks' full source, which may be unpublished research.
+  Tests that need them skip themselves when a file is missing.
+- Short names: `n1-alexnet-vgg`, `n2-efficientnet`, `n3-mobilenetv2`, `n4-vit`, `n5-rcnn`, `n6-firenet`.
+- `fixtures/summaries/*.txt` holds the raw summary outputs from N1–N5 (layer tables only). These
+  are committed and drive the summary-parser tests.
+- The expectations (model cells, summary totals, constants, class counts) live in
+  `src/core/notebook/reference.test.ts`.
+- Model cells found by the heuristics: N1 [14, 26], N2 [16, 17], N3 [15, 16], N4 [16, 40, 41],
+  N5 [26, 38, 43, 58, 66] (cell 66 builds the Faster R-CNN detector head), N6 [9].
+- `pnpm tsx scripts/inspect-notebook.mts <file>` prints what the analysis sees in any notebook.

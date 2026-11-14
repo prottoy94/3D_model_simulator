@@ -10,19 +10,25 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write src"
+    "format": "prettier --write src",
+    "make-fixture": "tsx scripts/make-fixture.mts",
+    "build-ir-fixtures": "tsx scripts/build-ir-fixtures.mts"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.2",
     "@react-three/postprocessing": "^3.2.2",
     "clsx": "^2.1.1",
+    "dexie": "^4.4.7",
     "motion": "^14.12.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-resizable-panels": "^4.21.0",
     "three": "^0.187.0",
+    "tree-sitter-python": "^0.25.0",
+    "web-tree-sitter": "^0.27.2",
     "zod": "^4.6.7",
     "zustand": "^5.1.0"
   },
@@ -36,6 +42,7 @@
     "eslint-config-next": "16.4.6",
     "prettier": "^3.10.1",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
   },

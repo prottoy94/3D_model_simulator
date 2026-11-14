@@ -32,7 +32,8 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["src/core/**/*.test.ts"],
+    // Tests and the Node-only test helper may read fixture files.
+    files: ["src/core/**/*.test.ts", "src/core/**/test-utils.ts"],
     rules: { "no-restricted-imports": "off" },
   },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts", ".cache/**"]),

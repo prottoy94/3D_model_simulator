@@ -43,12 +43,12 @@ export function PanelHeader({ title, actions, className }: PanelHeaderProps) {
   return (
     <header
       className={cn(
-        "flex h-9 shrink-0 items-center justify-between border-b border-line px-3",
+        "flex h-9 shrink-0 items-center justify-between gap-2 border-b border-line px-3",
         className,
       )}
     >
-      <h2 className="hud-label">{title}</h2>
-      {actions ? <div className="flex items-center gap-1">{actions}</div> : null}
+      <h2 className="hud-label truncate !font-bold !text-text-1">{title}</h2>
+      {actions ? <div className="flex shrink-0 items-center gap-1">{actions}</div> : null}
     </header>
   );
 }

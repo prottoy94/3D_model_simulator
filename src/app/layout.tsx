@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Chakra_Petch, Exo_2, JetBrains_Mono, Michroma } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"] });
-const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
+// Body: Exo 2 (geometric, technical). Display: Chakra Petch (angular HUD lettering).
+// Brand: Michroma (wide, instrument-panel wordmark). Mono: JetBrains Mono (code, numbers).
+const body = Exo_2({ variable: "--font-body", subsets: ["latin"] });
+const display = Chakra_Petch({
+  variable: "--font-display-face",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+const brand = Michroma({ variable: "--font-brand-face", subsets: ["latin"], weight: "400" });
+const mono = JetBrains_Mono({ variable: "--font-mono-face", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "NeuroScope",
@@ -16,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${body.variable} ${display.variable} ${brand.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">{children}</body>
     </html>

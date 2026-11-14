@@ -32,10 +32,10 @@ blob-report/
 **/__screenshots__/*-diff.png
 
 # ── Notebooks and model files ────────────────────────────────
-# Raw notebooks are large (embedded images) and may be private.
-# Only stripped copies under fixtures/notebooks/ are committed.
+# Notebooks can be large and private, so none are committed, including the
+# stripped test copies in fixtures/notebooks/ (see fixtures/README.md).
 *.ipynb
-!fixtures/notebooks/*.ipynb
+fixtures/notebooks/
 .ipynb_checkpoints/
 fixtures/**/raw/
 

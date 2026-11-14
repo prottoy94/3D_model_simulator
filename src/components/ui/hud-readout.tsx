@@ -21,8 +21,8 @@ export function HudReadout({ label, value, source, className }: HudReadoutProps)
   const mark = source ? sourceMark[source] : null;
   return (
     <div className={cn("flex items-baseline justify-between gap-3 py-1", className)}>
-      <span className="text-xs text-text-3">{label}</span>
-      <span className="flex items-baseline gap-1.5 font-mono text-[13px] tabular-nums text-text-1">
+      <span className="shrink-0 text-xs text-text-3">{label}</span>
+      <span className="flex min-w-0 items-baseline gap-1.5 text-right font-mono text-[13px] tabular-nums text-text-1 [overflow-wrap:anywhere]">
         {value}
         {mark ? (
           <span className={mark.className} title={mark.label} aria-label={mark.label}>

@@ -31,9 +31,10 @@
   --color-op-det: var(--op-det);
   --color-op-classic: var(--op-classic);
   --color-op-custom: var(--op-custom);
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-space-grotesk);
-  --font-mono: var(--font-jetbrains-mono);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display-face);
+  --font-brand: var(--font-brand-face);
+  --font-mono: var(--font-mono-face);
   --radius-panel: 14px;
   --radius-control: 8px;
 }
@@ -46,7 +47,7 @@ body {
 body {
   background: var(--bg-void);
   color: var(--text-1);
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
   font-size: 14px;
   overflow-x: hidden;
 }
@@ -62,10 +63,10 @@ body {
 
 /* HUD label: small uppercase display text used for panel titles and readouts. */
 .hud-label {
-  font-family: var(--font-space-grotesk), sans-serif;
+  font-family: var(--font-display-face), sans-serif;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-2);
 }
@@ -110,4 +111,51 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ── Code editor decorations (Monaco) ─────────────────────────── */
+.ns-cell-header {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.1), transparent 70%);
+}
+.ns-cell-markdown {
+  opacity: 0.75;
+}
+.ns-cell-selected {
+  background: rgba(34, 211, 238, 0.045);
+}
+.ns-role-bar {
+  width: 3px !important;
+  margin-left: 3px;
+  background: var(--role-other);
+}
+.ns-role-model {
+  background: var(--role-model);
+  box-shadow: 0 0 8px var(--role-model);
+}
+.ns-role-compile {
+  background: var(--role-compile);
+}
+.ns-role-train {
+  background: var(--role-train);
+}
+.ns-role-eval {
+  background: var(--role-eval);
+}
+.ns-role-data {
+  background: var(--role-data);
+}
+.ns-role-viz {
+  background: var(--role-viz);
+}
+.ns-role-config {
+  background: var(--role-config);
+}
+.ns-role-imports {
+  background: var(--role-imports);
+}
+.ns-role-setup {
+  background: var(--role-setup);
+}
+.ns-role-markdown {
+  background: transparent;
 }

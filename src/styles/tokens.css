@@ -1,14 +1,14 @@
 /* Design tokens: the only place raw color values live (see docs/06-UI-UX-DESIGN.md). */
 :root {
   /* space */
-  --bg-void: #03050a;
-  --bg-deep: #070b14;
+  --bg-void: #000000;
+  --bg-deep: #000000;
   --grid-line: rgba(90, 140, 255, 0.06);
 
   /* glass */
-  --glass-1: rgba(12, 18, 34, 0.62);
-  --glass-2: rgba(20, 28, 50, 0.78);
-  --glass-border: rgba(130, 190, 255, 0.14);
+  --glass-1: rgba(1, 2, 5, 0.8);
+  --glass-2: rgba(4, 6, 12, 0.9);
+  --glass-border: rgba(120, 200, 255, 0.1);
   --glass-border-strong: rgba(130, 190, 255, 0.28);
   --glass-highlight: linear-gradient(
     135deg,
@@ -46,9 +46,22 @@
   --op-classic: #facc15;
   --op-custom: #fb7185;
 
+  /* notebook cell roles (Notebook Map, editor headers) */
+  --role-model: var(--accent);
+  --role-compile: var(--op-norm);
+  --role-train: var(--op-linear);
+  --role-eval: var(--op-act);
+  --role-data: var(--op-pool);
+  --role-viz: var(--op-attn);
+  --role-config: var(--op-recur);
+  --role-imports: var(--op-shape);
+  --role-setup: var(--op-reg);
+  --role-other: var(--op-reg);
+  --role-markdown: var(--text-3);
+
   /* shape */
   --radius-panel: 14px;
   --radius-control: 8px;
-  --shadow-panel: 0 0 0 1px var(--glass-border), 0 8px 40px rgba(0, 0, 0, 0.45);
+  --shadow-panel: 0 0 0 1px var(--glass-border), 0 8px 40px rgba(0, 0, 0, 0.7);
   --glow-accent: 0 0 0 1px rgba(34, 211, 238, 0.5), 0 0 24px rgba(34, 211, 238, 0.25);
 }

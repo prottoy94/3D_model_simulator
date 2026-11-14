@@ -74,6 +74,33 @@ ones. Supersede them with a new ADR instead.
 - **Consequences:** exact backbone params (e.g., EfficientNetB0 + head = 4,214,571), and the
   backbone is collapsed by default for readability.
 
+### ADR-011: Notebook fixtures stay local; only summary tables are committed
+- **Context:** the reference notebooks hold the user's research code, and the repo is on GitHub.
+- **Decision:** `fixtures/notebooks/` is git-ignored. Tests that need a notebook skip when it is
+  missing. `fixtures/summaries/` (layer tables only) is committed.
+- **Consequences:** a fresh clone runs fewer tests until fixtures are recreated with
+  `pnpm make-fixture`. To publish a fixture on purpose, add a `.gitignore` exception.
+
+### ADR-012: Monaco loads from its default CDN for now
+- **Context:** `@monaco-editor/react` fetches the editor from jsDelivr by default. Bundling it
+  locally needs worker configuration under Turbopack.
+- **Decision:** keep the CDN default in Phase 1. Only editor code is fetched; notebook content is
+  never sent anywhere.
+- **Consequences:** the code panel needs internet on first load. Revisit (self-host via
+  `loader.config`) before any offline or deployed use.
+
+### ADR-013: Provider-neutral AI layer (supersedes ADR-005)
+- **Context:** the user has no Claude API key. They have free-tier keys for Gemini, Groq and
+  OpenRouter, and a Qwen (Alibaba Model Studio) free quota of 1M tokens.
+- **Decision:** one `AiProvider` interface with an adapter per provider (`gemini`, `groq`, `qwen`,
+  `openrouter`, optional `anthropic`). The user chooses the provider and model in the app; only
+  providers with a key in `.env.local` are offered; model lists are loaded live. OpenRouter is
+  limited to free models. Gemini is the default. Details in doc 05 §0.
+- **Consequences:** prompts and schemas cannot rely on Claude-only features. Structured output is
+  best effort and always re-validated with Zod. Weaker models mean more repair rounds, which makes
+  the deterministic engine and the no-AI fast path (Phase 2) more important. Free tiers may train
+  on prompts, so the privacy notice names the provider.
+
 ---
 
 ## Open questions (ask the user when relevant)
@@ -83,7 +110,7 @@ ones. Supersede them with a new ADR instead.
 | Q1 | Product name? ("NeuroScope" is a working title.) | Keep NeuroScope |
 | Q2 | Local-only use, or deploy (e.g., Vercel)? Deploying affects request time limits for long Fable calls and the need for auth. | Local first, deploy-ready structure |
 | Q3 | AI budget per month? | `AI_MONTHLY_BUDGET_USD=50`, with an estimate shown before each run |
-| Q4 | May we copy stripped versions of the reference notebooks into `fixtures/`? | Ask at Phase 1 |
+| Q4 | ~~Copy stripped notebooks into `fixtures/`?~~ Resolved by ADR-011: local only, git-ignored | n/a |
 | Q5 | Priority after the MVP: detection (N5/N6), NLP, or classical ML? | Detection first (it matches the user's research) |
 | Q6 | Should Forge default to PyTorch or Keras codegen? | Keras for the micro-organism work, PyTorch for research. Make it a toggle, default PyTorch |
 | Q7 | Load real trained weights (Tier 2) early? | P2 |

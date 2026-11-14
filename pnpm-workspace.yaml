@@ -1,3 +1,5 @@
 allowBuilds:
+  esbuild: true
   sharp: false
+  tree-sitter-python: false
   unrs-resolver: false

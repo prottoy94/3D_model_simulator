@@ -34,18 +34,26 @@ console errors; frame rate was not measured.
 ## Phase 1: Ingest and Notebook Map
 **Goal:** drop any `.ipynb` and see its cells, roles and code instantly, with no AI.
 
-- [ ] `core/notebook`: nbformat parse (string or list `source`), output stripping, ANSI strip,
+- [x] `core/notebook`: nbformat parse (string or list `source`), output stripping, ANSI strip,
       HTML-table-to-text, truncation, stable cell ids.
-- [ ] `core/python`: web-tree-sitter + Python grammar (WASM in `public/`), a line-preserving
-      sanitizer for `!`, `%` and `%%`, top-level symbol table (assignments, defs, classes, imports).
-- [ ] Cell-role heuristics (imports / config / data / **model** / compile / train / eval / viz / other) with confidence.
-- [ ] Summary-output parsers: Keras 3 rich table (wrapped rows, `…`, split outputs), Keras 2 plain
+- [x] `core/python`: web-tree-sitter + Python grammar (WASM in `public/wasm/`), a line-preserving
+      sanitizer for `!`, `%` and `%%`, a symbol table (assignments, defs, classes, imports), and a
+      static evaluator for constants (`NUM_PATCHES = (IMG_HEIGHT // PATCH_SIZE) ** 2` → 196).
+- [x] Cell-role heuristics (imports / config / data / **model** / setup / train / eval / plot / other) with confidence.
+- [x] Summary-output parsers: Keras 3 rich table (wrapped rows, `…`, split outputs), Keras 2 plain
       text, torchinfo, "Found N images belonging to K classes", printed param totals.
-- [ ] `scripts/make-fixture.ts`. After the user approves, create fixtures for N1–N6 and capture
-      raw summary outputs as parser fixtures.
-- [ ] UI: drag-drop ingest, Notebook Map, Monaco with all cells (continuous document with cell
-      separators), click a cell → scroll to it.
-- [ ] IndexedDB project persistence (Dexie) keyed by the notebook hash.
+- [x] `pnpm make-fixture` (`scripts/make-fixture.mts`). Fixtures for N1–N6 exist locally in
+      `fixtures/notebooks/` and are **git-ignored** (private source code). The raw summary outputs
+      in `fixtures/summaries/` are committed as parser fixtures.
+- [x] UI: drag-drop ingest (landing page and Scope), file picker, Notebook Map, Monaco with all
+      cells as one read-only document, map ⇄ editor selection sync, a notebook inspector.
+- [x] IndexedDB project persistence (Dexie) keyed by the notebook hash; the last notebook is
+      restored on reload.
+
+**Status (2026-11-13):** done. 77 tests pass. All six notebooks analyze in 35–150 ms, model cells
+are tagged exactly, and the parsed summaries reproduce every total in doc 07 §4. Checked in the
+browser with the ViT notebook. Not done: Keras 2 and torchinfo parsers are tested on synthetic
+samples only (no reference notebook uses them).
 
 **Acceptance:** all six reference notebooks load in under 1 s after stripping. Model cells are
 tagged correctly in all six. The parsed summaries reproduce the totals in doc 07 §4.
@@ -55,19 +63,28 @@ tagged correctly in all six. The parsed summaries reproduce the totals in doc 07
 ## Phase 2: IR, Op Catalog, Shape Engine
 **Goal:** the deterministic heart, fully tested.
 
-- [ ] `core/ir`: Wire and Runtime Zod schemas (doc 03), normalization (symbol substitution,
+- [x] `core/ir`: Wire and Runtime Zod schemas (doc 03), normalization (symbol substitution,
       typed params, repeat unrolling, integrity checks), `RepairPatch` apply.
-- [ ] `core/ops`: catalog entries for the MVP ops: input, conv2d, depthwise_conv2d, maxpool2d,
+- [x] `core/ops`: catalog entries for the MVP ops: input, conv2d, depthwise_conv2d, maxpool2d,
       avgpool2d, global_avg_pool, batchnorm, layernorm, relu, gelu, softmax, sigmoid, dense,
       dropout, flatten, reshape, add, concat, multiply, patchify, patch_embed, pos_embed, slice,
       multi_head_attention, embedding, custom, backbone.
-- [ ] `core/shapes`: propagation, layout helpers, param/FLOP counting (framework-aware), and
+- [x] `core/shapes`: propagation, layout helpers, param/FLOP counting (framework-aware), and
       verification against parsed summaries.
-- [ ] Hand-written IR fixtures: AlexNet, VGG16 and mini-ViT (`fixtures/ir/*.json`). These also
+- [x] Hand-written IR fixtures: AlexNet, VGG16 and mini-ViT (`fixtures/ir/*.json`). These also
       seed the **gallery**.
-- [ ] Golden tests: every number in doc 07 §4 for N1, N4 and the N5 models.
-- [ ] Fast-path parser (Local-only mode): deterministic IR for simple Keras `Sequential` and
+- [x] Golden tests: every number in doc 07 §4 for N1, N4 and the N5 models.
+- [x] Fast-path parser (Local-only mode): deterministic IR for simple Keras `Sequential` and
       PyTorch `nn.Sequential` code (AlexNet and VGG16 must parse without AI).
+
+**Status (2026-11-14):** done. 123 tests pass. The engine reproduces every N1, N4 and N5 number
+in doc 07 §4, row by row against the saved summaries. The fast path reads N1's AlexNet and VGG16
+with exact totals and declines the other five notebooks' models (they need the AI step). Scope's
+inspector shows the no-AI result. Beyond the roadmap list: `roi_pool` and a `timeDistributed`
+param (needed for Fast R-CNN). Not done: zoo expansion (Phase 4), the Lens interval tree (Phase 6;
+a sorted `codeIntervals` list exists), `Sequential()` + `.add()` in the fast path, and FLOP counts
+have no external reference to check against (only conv and dense follow doc 03's formulas).
+The fixtures are generated from `src/core/ir/examples.ts` by `pnpm build-ir-fixtures`.
 
 **Acceptance:** `pnpm test` passes all golden facts. The fast path produces a verified IR for
 N1's AlexNet and VGG16 with exact totals.
@@ -91,10 +108,12 @@ Clicking any node highlights the correct code lines. Screenshot regression basel
 
 ---
 
-## Phase 4: Fable 5.2 extraction
-**Goal:** any notebook → a verified IR through Claude.
+## Phase 4: AI extraction (provider-neutral, ADR-013)
+**Goal:** any notebook → a verified IR through the user's chosen provider (Gemini, Groq, Qwen, OpenRouter free models; Claude optional).
 
-- [ ] Load the `claude-api` skill and verify SDK usage. Write `src/server/ai/{config,client,stream,cache,cost-guard}.ts`.
+- [ ] `AiProvider` interface and one adapter per provider (doc 05 §0), each checked against the
+      provider's current docs. Live model lists. A provider/model picker in the top bar.
+      `src/server/ai/{config,providers/*,stream,cache,usage}.ts`.
 - [ ] System prompt v1 (op catalog and zoo keys generated from code) and the task prompts.
 - [ ] Context slicer and condenser (doc 05 §7), plus a token and cost estimate via `countTokens`.
 - [ ] `/api/ai/extract` with SSE streaming: Neural Log (thinking summaries), stages, result, typed errors.
