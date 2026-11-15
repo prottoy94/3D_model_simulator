@@ -101,6 +101,53 @@ ones. Supersede them with a new ADR instead.
   the deterministic engine and the no-AI fast path (Phase 2) more important. Free tiers may train
   on prompts, so the privacy notice names the provider.
 
+### ADR-014: One layout core for 3D and 2D; ELK postponed (amends ADR-006)
+- **Context:** ADR-006 planned React Flow + ELK for the 2D graph. Phase 3 needed the same
+  structure in 3D and 2D, including collapsed groups, and model graphs here are mostly chains
+  with a few branches and skip connections.
+- **Decision:** `src/core/layout/graph.ts` builds one "visible graph" (collapsed groups folded,
+  ranks by longest path, lanes for branches). The 3D river and the 2D cards are two placements of
+  it. React Flow renders the 2D view; ELK is not installed.
+- **Consequences:** both views always agree, the layout is pure and unit-tested, and there is no
+  1.5 MB layout dependency. Dense graphs with many crossing edges (large detectors) may need ELK
+  later; it can replace the lane step without touching the views.
+
+### ADR-015: The LLM writes a forgiving "Draft", not Wire IR
+- **Context:** Wire IR (doc 03) is strict: every field required, edges separate from nodes, params
+  as key/value pairs. Free-tier models are weaker than the model the plan was written for, and
+  only some providers enforce a JSON schema.
+- **Decision:** the model writes a Draft (`src/core/ai/draft.ts`): few required fields, params as
+  a plain object, connections as an `inputs` list on each node, code location as
+  `[cell, first, last]`. `draftToWire` expands it into Wire IR; unknown layer names fall back to
+  `custom`, arithmetic like `"num_classes + 1"` is evaluated by a tiny parser, and pretrained
+  backbones are filled in from zoo facts. Repairs are partial node patches, not `RepairPatch`.
+- **Consequences:** Wire IR stays the internal contract and the only thing the engine reads.
+  Requests use plain JSON mode and are validated with Zod. `RepairPatch` (doc 03 §6) remains for
+  Forge and for a future strict-schema provider.
+
+### ADR-016: One OpenAI-compatible client instead of one adapter per provider
+- **Context:** ADR-013 planned an adapter per provider. All four configured providers expose an
+  OpenAI-compatible chat endpoint (checked against the live APIs on 2026-11-15).
+- **Decision:** one streaming client with a small config per provider (address, key, which models
+  to offer, a data note). Model lists are loaded live and filtered; OpenRouter is limited to
+  `:free` ids with a zero price.
+- **Consequences:** adding a provider is a config entry. Provider-specific features (Gemini
+  schema-constrained output, Qwen thinking mode) are not used. An `anthropic` adapter would be
+  the first real second client.
+
+### ADR-017: A pure-TypeScript compute engine instead of tfjs (replaces ADR-007's choice)
+- **Context:** ADR-007 chose tfjs for in-browser compute and allowed custom kernels behind the
+  same interface if tfjs was a poor fit. The simulation needs every op in the catalog, exact
+  agreement with the shape engine, and deterministic numbers for tests.
+- **Decision:** `src/core/sim` computes each layer on `Float32Array`s in plain TypeScript, in a
+  web worker. Weights are generated from a seed per node (Glorot uniform, as an untrained Keras
+  layer); a dense layer's weight rows are generated on the fly, so AlexNet's 26-million-weight
+  layer needs no memory. Tensors are channel-last internally whatever the framework.
+- **Consequences:** no dependency, the engine is unit-tested in Node, and results are identical
+  on every machine. It is slow for big CNNs: about 0.3 billion multiply-adds per second, so VGG16
+  takes about 50 s (layers appear as they finish). A WebGPU or tfjs backend can replace the
+  kernels later without touching the plan, the views or the UI. Trained weights are not loaded.
+
 ---
 
 ## Open questions (ask the user when relevant)

@@ -32,6 +32,8 @@ export type RuntimeNode = Omit<WireNode, "params"> & {
   /** Canonical node id when this node is an unrolled repeat instance. */
   templateId: string | null;
   summaryRow: SummaryRow | null;
+  /** Names of the symbols this node's params were written with (e.g. "PATCH_SIZE"). Lens uses them. */
+  symbolsUsed: string[];
 };
 
 export type RuntimeGroup = WireGroup & {

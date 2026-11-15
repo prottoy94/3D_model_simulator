@@ -2,18 +2,39 @@
 
 import { useEffect, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { GlassPanel, HudReadout, PanelHeader } from "@/components/ui";
+import { GlassPanel, HudReadout, PanelHeader, SegmentedControl } from "@/components/ui";
 import { CodeEditor } from "@/features/editor/code-editor";
+import { LensChip } from "@/features/editor/lens-chip";
+import { LayerInspector } from "@/features/inspector/layer-inspector";
 import { NotebookInspector } from "@/features/inspector/notebook-inspector";
+import { TensorInspector } from "@/features/inspector/tensor-inspector";
 import { NotebookMap } from "@/features/notebook-map/notebook-map";
 import { Viewport } from "@/features/viewport-3d";
 import { cn } from "@/lib/cn";
+import { useModelStore } from "@/stores/model-store";
 import { useProjectStore } from "@/stores/project-store";
+import { useUiStore, type InspectorTab } from "@/stores/ui-store";
 import { OpenNotebookButton } from "./open-notebook-button";
 import { TimelineBar } from "./timeline-bar";
 
+const modelTabs: ReadonlyArray<{ value: InspectorTab; label: string }> = [
+  { value: "layer", label: "Layer" },
+  { value: "tensor", label: "Tensor" },
+];
+const notebookTab = { value: "notebook", label: "Notebook" } as const;
+
 export function ScopeShell() {
+  const hasModel = useModelStore((state) => state.ir !== null);
+  const isGallery = useModelStore((state) => state.source === "gallery");
+  const inspectorTab = useUiStore((state) => state.inspectorTab);
+  const setInspectorTab = useUiStore((state) => state.setInspectorTab);
   const hasProject = useProjectStore((state) => state.project !== null);
+  const hasNotebook = hasProject && !isGallery;
+  // A tab that does not apply to what is open falls back to Layer.
+  const tab: InspectorTab =
+    (inspectorTab === "notebook" && !hasNotebook) || (inspectorTab === "tensor" && !hasModel)
+      ? "layer"
+      : inspectorTab;
   const status = useProjectStore((state) => state.status);
   const error = useProjectStore((state) => state.error);
   const openFile = useProjectStore((state) => state.openFile);
@@ -23,6 +44,8 @@ export function ScopeShell() {
 
   // After a page reload, bring back the notebook that was open last.
   useEffect(() => {
+    // Coming from Forge, its model is still on screen: show the notebook's again.
+    if (useModelStore.getState().source === "forge") useProjectStore.getState().showCurrent();
     void restoreLatest();
   }, [restoreLatest]);
 
@@ -56,15 +79,20 @@ export function ScopeShell() {
                   ) : null
                 }
               />
-              {hasProject ? (
+              {hasProject && !isGallery ? (
                 <NotebookMap />
+              ) : isGallery ? (
+                <EmptyHint>
+                  This is a gallery model, so there is no notebook. The code below is generated from
+                  the model, one line per layer.
+                </EmptyHint>
               ) : (
                 <EmptyHint>Cells appear here, tagged by role. Model cells glow.</EmptyHint>
               )}
             </GlassPanel>
             <GlassPanel className="flex-1">
-              <PanelHeader title="Code" />
-              {hasProject ? (
+              <PanelHeader title={isGallery ? "Code · generated" : "Code"} actions={<LensChip />} />
+              {hasProject || isGallery ? (
                 <CodeEditor />
               ) : (
                 <EmptyHint>The notebook&apos;s code, linked to the Notebook Map.</EmptyHint>
@@ -83,9 +111,26 @@ export function ScopeShell() {
 
         <Panel id="right" defaultSize="21%" minSize="14%" maxSize="36%" collapsible>
           <GlassPanel className="h-full">
-            <PanelHeader title="Inspector" />
-            {hasProject ? (
+            <PanelHeader
+              title="Inspector"
+              actions={
+                hasModel || hasNotebook ? (
+                  <SegmentedControl
+                    label="Inspector tab"
+                    options={hasNotebook ? [...modelTabs, notebookTab] : modelTabs}
+                    value={tab}
+                    onChange={setInspectorTab}
+                    className="!h-6 [&>button]:!px-2"
+                  />
+                ) : null
+              }
+            />
+            {hasNotebook && tab === "notebook" ? (
               <NotebookInspector />
+            ) : hasModel && tab === "tensor" ? (
+              <TensorInspector />
+            ) : hasModel || hasProject ? (
+              <LayerInspector />
             ) : (
               <>
                 <div className="px-3 py-2">

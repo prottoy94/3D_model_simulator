@@ -159,3 +159,35 @@ body {
 .ns-role-markdown {
   background: transparent;
 }
+
+/* Code ↔ model linking: lines of the selected and the hovered layer. */
+.ns-ref-selected {
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.ns-ref-hovered {
+  background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+}
+
+/* React Flow chrome, matched to the glass panels. */
+.react-flow.dark {
+  --xy-background-color: transparent;
+}
+.react-flow__controls {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+  box-shadow: none;
+}
+.react-flow__controls-button {
+  background: var(--glass-2);
+  border-bottom: 1px solid var(--glass-border);
+  fill: var(--text-2);
+}
+.react-flow__controls-button:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--glass-2));
+}
+.react-flow__attribution {
+  background: transparent;
+  opacity: 0.4;
+}

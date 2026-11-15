@@ -1,6 +1,7 @@
 import { create } from "zustand";
+import { draftToWire, type Draft } from "@/core/ai/draft";
 import { extractSequentialModels, type Declined } from "@/core/fastpath";
-import { buildRuntimeIR, type RuntimeIR } from "@/core/ir";
+import { buildRuntimeIR, type RuntimeIR, type WireIR } from "@/core/ir";
 import {
   analyzeNotebook,
   NotebookParseError,
@@ -9,8 +10,15 @@ import {
   type NotebookAnalysis,
 } from "@/core/notebook";
 import { buildNotebookDocument, type NotebookDocument } from "@/core/notebook/document";
-import { loadLatestProject, saveProject, sha256Hex } from "@/lib/project-db";
+import {
+  loadLatestProject,
+  loadProject,
+  saveProject,
+  sha256Hex,
+  type AiSource,
+} from "@/lib/project-db";
 import { getPythonParser } from "@/lib/python-parser";
+import { useModelStore } from "./model-store";
 
 export type Project = {
   hash: string;
@@ -18,8 +26,13 @@ export type Project = {
   notebook: Notebook;
   analysis: NotebookAnalysis;
   document: NotebookDocument;
-  /** Models read from the code without AI (simple layer stacks only), shaped and verified. */
+  /** The architecture on screen: from the AI draft when there is one, else read without AI. */
   ir: RuntimeIR | null;
+  /** The Wire IR `ir` was built from, kept so assumptions can be edited and re-verified. */
+  wire: WireIR | null;
+  /** What an AI provider returned for this notebook. Stored locally so it is never asked twice. */
+  draft: Draft | null;
+  aiSource: AiSource | null;
   /** Layer stacks the no-AI reader found but would not vouch for, and why. */
   declined: Declined[];
   originalBytes: number;
@@ -38,7 +51,26 @@ type ProjectState = {
   openFile: (file: File) => Promise<boolean>;
   restoreLatest: () => Promise<void>;
   selectCell: (index: number | null, source: "map" | "editor") => void;
+  /** Shows the open notebook's model again (after Forge used the views). */
+  showCurrent: () => void;
+  /** Shows an AI draft for the open notebook and saves it locally. */
+  applyDraft: (draft: Draft, source: AiSource) => void;
+  /** Drops the AI result and goes back to what can be read without AI. */
+  discardDraft: () => void;
 };
+
+const summariesOf = (analysis: NotebookAnalysis) =>
+  analysis.cells.flatMap((cell) => cell.summaries);
+
+function buildFromWire(
+  wire: WireIR | null,
+  analysis: NotebookAnalysis,
+  provenance: "ai" | "heuristic",
+): RuntimeIR | null {
+  if (!wire) return null;
+  const built = buildRuntimeIR(wire, { summaries: summariesOf(analysis), provenance });
+  return built.ok ? built.ir : null;
+}
 
 async function buildProject(
   name: string,
@@ -46,27 +78,60 @@ async function buildProject(
   originalBytes: number,
   hash: string,
   startedAt: number,
+  stored: { draft?: Draft; aiSource?: AiSource } = {},
 ): Promise<Project> {
   const parser = await getPythonParser();
   const analysis = analyzeNotebook(notebook, parser);
   const fast = extractSequentialModels(notebook, analysis, parser);
-  const built = fast.wire
-    ? buildRuntimeIR(fast.wire, {
-        summaries: analysis.cells.flatMap((cell) => cell.summaries),
-        provenance: "heuristic",
-      })
-    : null;
+
+  // A saved AI result wins: it covers models the no-AI reader cannot read.
+  let wire: WireIR | null = null;
+  let ir: RuntimeIR | null = null;
+  let draft: Draft | null = null;
+  if (stored.draft) {
+    wire = draftToWire(stored.draft);
+    ir = buildFromWire(wire, analysis, "ai");
+    if (ir) draft = stored.draft;
+  }
+  if (!ir) {
+    wire = fast.wire;
+    ir = buildFromWire(wire, analysis, "heuristic");
+  }
+
   return {
     hash,
     name,
     notebook,
     analysis,
     document: buildNotebookDocument(notebook, analysis.cells),
-    ir: built?.ok ? built.ir : null,
+    ir,
+    wire: ir ? wire : null,
+    draft,
+    aiSource: draft ? (stored.aiSource ?? null) : null,
     declined: fast.declined,
     originalBytes,
     analysisMs: Math.round(performance.now() - startedAt),
   };
+}
+
+function show(project: Project): void {
+  useModelStore.getState().setIR(project.ir, "notebook", {
+    wire: project.wire,
+    summaries: summariesOf(project.analysis),
+  });
+}
+
+function persist(project: Project): void {
+  // Persistence is a convenience: a failure (private mode, full disk) must not block the UI.
+  saveProject({
+    hash: project.hash,
+    name: project.name,
+    notebook: project.notebook,
+    originalBytes: project.originalBytes,
+    openedAt: Date.now(),
+    draft: project.draft ?? undefined,
+    aiSource: project.aiSource ?? undefined,
+  }).catch(() => undefined);
 }
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
@@ -89,21 +154,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         throw new NotebookParseError("This notebook has no code cells to analyze.");
       }
       const hash = await sha256Hex(JSON.stringify(notebook.cells));
-      const project = await buildProject(file.name, notebook, file.size, hash, startedAt);
+      // The same notebook opened before keeps its AI result: no second request.
+      const earlier = await loadProject(hash).catch(() => undefined);
+      const project = await buildProject(file.name, notebook, file.size, hash, startedAt, earlier);
+      show(project);
       set({
         status: "ready",
         project,
         selectedCell: project.analysis.modelCells[0] ?? null,
         selectionSource: "map",
       });
-      // Persistence is a convenience: a failure (private mode, full disk) must not block the UI.
-      saveProject({
-        hash,
-        name: file.name,
-        notebook,
-        originalBytes: file.size,
-        openedAt: Date.now(),
-      }).catch(() => undefined);
+      persist(project);
       return true;
     } catch (error) {
       const message =
@@ -116,7 +177,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   restoreLatest: async () => {
-    if (get().project || get().status === "loading") return;
+    // A gallery model opened from the landing page must not be replaced by the last notebook.
+    if (
+      get().project ||
+      get().status === "loading" ||
+      useModelStore.getState().source === "gallery"
+    )
+      return;
     try {
       const stored = await loadLatestProject();
       if (!stored || get().project) return;
@@ -127,7 +194,9 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         stored.originalBytes,
         stored.hash,
         performance.now(),
+        stored,
       );
+      show(project);
       set({
         status: "ready",
         project,
@@ -140,4 +209,40 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   },
 
   selectCell: (index, source) => set({ selectedCell: index, selectionSource: source }),
+
+  showCurrent: () => {
+    const project = get().project;
+    if (project) show(project);
+    else useModelStore.getState().setIR(null, "notebook");
+  },
+
+  applyDraft: (draft, aiSource) => {
+    const current = get().project;
+    if (!current) return;
+    const wire = draftToWire(draft);
+    const ir = buildFromWire(wire, current.analysis, "ai");
+    if (!ir) return;
+    const project: Project = { ...current, ir, wire, draft, aiSource };
+    show(project);
+    set({ project });
+    persist(project);
+  },
+
+  discardDraft: () => {
+    const current = get().project;
+    if (!current?.draft) return;
+    void (async () => {
+      const project = await buildProject(
+        current.name,
+        current.notebook,
+        current.originalBytes,
+        current.hash,
+        performance.now(),
+      );
+      if (get().project?.hash !== current.hash) return;
+      show(project);
+      set({ project });
+      persist(project);
+    })();
+  },
 }));

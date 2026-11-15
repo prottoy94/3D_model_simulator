@@ -60,6 +60,7 @@ export function normalizeWire(
       wrapper,
       issues: paramIssues,
       failed,
+      symbolsUsed,
     } = typeParams(node.op, node.params, symbols, framework);
     return {
       ...node,
@@ -74,6 +75,7 @@ export function normalizeWire(
       provenance,
       templateId: null,
       summaryRow: null,
+      symbolsUsed,
     };
   });
 
@@ -117,14 +119,18 @@ function typeParams(
 ): {
   params: Record<string, unknown>;
   wrapper: RuntimeNode["wrapper"];
+  symbolsUsed: string[];
   issues: Issue[];
   failed: boolean;
 } {
   const issues: Issue[] = [];
+  const symbolsUsed: string[] = [];
   const given: Record<string, unknown> = {};
   for (const { key, value } of entries) {
     // A string that names a symbol stands for that symbol's value ("PATCH_SIZE" → 16).
-    given[key] = typeof value === "string" && symbols.has(value) ? symbols.get(value) : value;
+    const named = typeof value === "string" && symbols.has(value);
+    if (named) symbolsUsed.push(value);
+    given[key] = named ? symbols.get(value) : value;
   }
   const wrapper = given[TIME_DISTRIBUTED_KEY] === true ? "time_distributed" : null;
   delete given[TIME_DISTRIBUTED_KEY];
@@ -136,7 +142,7 @@ function typeParams(
       message: `"${op}" has no catalog entry yet, so its shape and parameter count are not computed.`,
       severity: "warn",
     });
-    return { params: given, wrapper, issues, failed: false };
+    return { params: given, wrapper, issues, failed: false, symbolsUsed };
   }
 
   const result = spec.params.safeParse({ ...spec.defaults[framework], ...given });
@@ -148,7 +154,7 @@ function typeParams(
         severity: "error",
       });
     }
-    return { params: given, wrapper, issues, failed: true };
+    return { params: given, wrapper, issues, failed: true, symbolsUsed };
   }
   const params = result.data as Record<string, unknown>;
   for (const key of Object.keys(given)) {
@@ -160,7 +166,7 @@ function typeParams(
       });
     }
   }
-  return { params, wrapper, issues, failed: false };
+  return { params, wrapper, issues, failed: false, symbolsUsed };
 }
 
 type Graph = {

@@ -20,20 +20,29 @@ export type BuildResult = { ok: true; ir: RuntimeIR } | { ok: false; errors: str
 
 const plain = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-/** Pairs each model with the saved summary that carries its name, else by position among the unnamed ones. */
+/**
+ * Pairs a model with one of the notebook's saved summaries: by name first, then
+ * by an identical parameter total, and for a single-model notebook the first
+ * summary Keras left unnamed ("functional", "sequential").
+ */
 function pickSummary(
   modelName: string,
+  computedTotal: number,
   summaries: ModelSummary[],
   taken: Set<ModelSummary>,
+  soleModel: boolean,
 ): ModelSummary | null {
-  const byName = summaries.find(
-    (summary) =>
-      !taken.has(summary) &&
-      summary.modelName !== null &&
-      plain(summary.modelName) === plain(modelName),
-  );
-  if (byName) taken.add(byName);
-  return byName ?? null;
+  const free = summaries.filter((summary) => !taken.has(summary));
+  const generic = (summary: ModelSummary) =>
+    summary.modelName === null || /^(functional|sequential|model)(_\d+)?$/i.test(summary.modelName);
+  const found =
+    free.find(
+      (summary) => summary.modelName !== null && plain(summary.modelName) === plain(modelName),
+    ) ??
+    free.find((summary) => generic(summary) && summary.totals.total === computedTotal) ??
+    (soleModel ? free.find(generic) : undefined);
+  if (found) taken.add(found);
+  return found ?? null;
 }
 
 export function buildRuntimeIR(input: unknown, options: BuildOptions = {}): BuildResult {
@@ -60,7 +69,13 @@ export function buildRuntimeIR(input: unknown, options: BuildOptions = {}): Buil
   for (const model of ir.models) {
     const modelNodes = (topoOrder[model.id] ?? []).map((id) => nodes[id]!);
     const modelGroups = ir.groups.filter((group) => group.modelId === model.id);
-    const summary = pickSummary(model.name, options.summaries ?? [], taken);
+    const summary = pickSummary(
+      model.name,
+      sumParams(modelNodes).total,
+      options.summaries ?? [],
+      taken,
+      ir.models.length === 1,
+    );
     verification.perModel[model.id] = verifyModel({
       nodes: modelNodes,
       groups: modelGroups,

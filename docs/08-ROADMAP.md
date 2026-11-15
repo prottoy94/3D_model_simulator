@@ -94,14 +94,28 @@ N1's AlexNet and VGG16 with exact totals.
 ## Phase 3: 3D and 2D visualization (static)
 **Goal:** a gorgeous, navigable architecture view driven by the IR.
 
-- [ ] `core/layout`: 3D "data river" layout, branch fan-out, group frames, log-scaled tensor boxes, collapse/LOD.
-- [ ] Viewport: instanced glyphs per family, curved edges, group frames, labels (drei `Text`/
+- [x] `core/layout`: 3D "data river" layout, branch fan-out, group frames, log-scaled tensor boxes, collapse/LOD.
+- [x] Viewport: instanced glyphs per family, curved edges, group frames, labels (drei `Text`/
       `Html` with LOD), bloom, fog, camera modes (Orbit / Overview / Follow placeholder),
       `PerformanceMonitor`.
-- [ ] 2D graph view (React Flow + ELK) with a 3D/2D toggle.
-- [ ] Inspector (Layer tab): params, shapes with ✓/≈/⚠ badges, param counts, FLOPs, catalog explanation.
-- [ ] Code ↔ node linking: click a node → Monaco reveal + decoration; hover a line → node pulse.
-- [ ] Model picker for multi-model notebooks. Gallery cards open the prebuilt IR.
+- [x] 2D graph view (React Flow + ELK) with a 3D/2D toggle.
+- [x] Inspector (Layer tab): params, shapes with ✓/≈/⚠ badges, param counts, FLOPs, catalog explanation.
+- [x] Code ↔ node linking: click a node → Monaco reveal + decoration; hover a line → node pulse.
+- [x] Model picker for multi-model notebooks. Gallery cards open the prebuilt IR.
+
+- [ ] Playwright screenshot baselines (still deferred: it needs a browser download of about
+      150 MB, and WebGL screenshots are unstable in headless mode; ask the user first).
+
+**Status (2026-11-14):** done except Playwright. 136 tests pass. Checked in the browser: AlexNet,
+VGG16 and mini-ViT render in 3D and 2D, groups collapse and expand, clicking a block fills the
+Layer inspector and highlights its code line, hovering a code line highlights its block, and the
+model picker switches between a notebook's models. Differences from the plan: the 2D view uses
+the shared core layout instead of ELK (ADR-014); labels are a DOM overlay positioned per frame,
+not drei `Html` (it logged React unmount errors); camera modes are Orbit and Overview only (Follow
+needs the simulation, Phase 5); dense layers show at most 18 neurons. Gallery models link to a
+generated code listing (`src/core/codegen/listing.ts`) because they have no notebook. Not done:
+the frame rate was not measured, frozen/ice and `ai-synth` styling (nothing produces them yet),
+and reloading `/scope` with a gallery model open returns to the last notebook.
 
 **Acceptance:** AlexNet, VGG16 and mini-ViT render at 60 fps. Expand/collapse animates.
 Clicking any node highlights the correct code lines. Screenshot regression baselines are recorded.
@@ -111,19 +125,33 @@ Clicking any node highlights the correct code lines. Screenshot regression basel
 ## Phase 4: AI extraction (provider-neutral, ADR-013)
 **Goal:** any notebook → a verified IR through the user's chosen provider (Gemini, Groq, Qwen, OpenRouter free models; Claude optional).
 
-- [ ] `AiProvider` interface and one adapter per provider (doc 05 §0), each checked against the
-      provider's current docs. Live model lists. A provider/model picker in the top bar.
-      `src/server/ai/{config,providers/*,stream,cache,usage}.ts`.
-- [ ] System prompt v1 (op catalog and zoo keys generated from code) and the task prompts.
-- [ ] Context slicer and condenser (doc 05 §7), plus a token and cost estimate via `countTokens`.
-- [ ] `/api/ai/extract` with SSE streaming: Neural Log (thinking summaries), stages, result, typed errors.
-- [ ] Refusal and `max_tokens` handling, server-side fallback, usage logging and the cost meter.
-- [ ] Verify → repair loop (at most 2 rounds) with `/api/ai/repair` (append-only conversation).
-- [ ] Assumptions panel (editable symbols, instant re-verify).
-- [ ] Zoo v1 templates: EfficientNetB0, MobileNetV2 (via `tools/zoo-export`, the user runs it
-      locally, or hand-authored from the documented architecture with totals checked).
-- [ ] First-run privacy notice and Local-only mode switch.
-- [ ] `pnpm eval:ai` harness (doc 05 §10). **Ask the user before each paid run.**
+- [x] One OpenAI-compatible client for Gemini, Groq, Qwen and OpenRouter
+      (`src/server/ai/providers.ts`), live model lists, timeouts and retries for overloaded models.
+      A provider/model menu in the top bar. (The optional `anthropic` adapter is not built: the
+      user has no key.)
+- [x] System prompt generated from the op catalog and the zoo, and the Draft format (ADR-015).
+- [x] Context slicer (`src/core/ai/context.ts`) with a token estimate shown before sending.
+- [x] `/api/ai/extract`: streamed events (stages, model output, result, typed errors) and the
+      Analyze panel with a live log.
+- [x] Verify → repair loop (at most 2 rounds), inside the same request.
+- [x] Assumptions are editable in the inspector, with instant re-verification.
+- [x] Zoo **facts** (output shape and parameter counts) for EfficientNetB0, MobileNetV2, ResNet50,
+      VGG16, ViT-B/16, ConvNeXt-Tiny. Full layer-by-layer templates are still to do.
+- [x] Consent per provider before the first request, and a Local-only switch.
+- [x] `pnpm eval:ai <provider> <model> <notebooks…>`. **Ask the user before running it on their notebooks.**
+- [ ] Run the eval on the reference notebooks N1–N6 (needs the user's go-ahead: it sends their
+      code to a provider).
+- [ ] Layer-by-layer zoo templates, so a backbone can be opened and simulated.
+- [ ] Usage tracking across runs (the Qwen 1M-token quota is not tracked yet).
+
+**Status (2026-11-15):** built and working end to end. 151 tests pass. Checked with a toy residual
+network written for the test: Gemini 2.5 Flash and Groq `gpt-oss-120b` both returned a correct
+architecture with code line numbers (58,469 params, hand-checked), the 3D view drew it, and a
+reload restored it with no API call. In unit tests, hand-written drafts for the EfficientNetB0 and
+MobileNetV2 notebooks reproduce the saved totals exactly (4,214,571 and 2,422,984) through the zoo
+facts. **Not done:** no reference notebook has been sent to a provider, so the acceptance below is
+untested; Qwen has no key and OpenRouter models were listed but not called; the newest Gemini
+models were overloaded or hung during testing (the default is `gemini-2.5-flash`).
 
 **Acceptance:** with the user's approval, the eval on N1–N4 hits every golden total exactly after
 verification. N5 extracts all four models. N6 extracts FireNet's structure, with the ConvNeXt-T
@@ -135,17 +163,30 @@ no API call.
 ## Phase 5: Simulation engine (MVP complete)
 **Goal:** press Play and watch the model think.
 
-- [ ] `core/sim`: SimPlan compiler, pure `stateAt`, clock store, macro-steps for collapsed groups.
-- [ ] Viewport choreography: pulses along edges, ignite/transform/emit, flatten ribbon, residual
-      merge, frozen ice, repeat ghosts, Follow camera.
-- [ ] Timeline: markers by family, group bands, scrub, step, speed, loop, keyboard shortcuts.
-- [ ] Tensor backend Tier 1 (tfjs IR interpreter for the MVP ops) and Tier 0 (symbolic), the
-      compute budget, and honest labels.
-- [ ] Sample inputs plus user image upload. Teaching kernels option for conv1.
-- [ ] Micro-visualizers v1: conv-sweep, pool-window, global-pool, activation-curve, norm-histogram,
-      dense-matrix, flatten-unroll, dropout-mask, merge-streams, softmax-bars, patchify-grid,
-      pos-embed, attention-heads.
-- [ ] Inspector Tensor tab (channel grid, histogram, stats).
+- [x] `core/sim`: SimPlan (`buildPlan`), pure `stateAt`, macro-steps for collapsed groups. The
+      clock lives in `src/stores/sim-store.ts` outside React state.
+- [x] Viewport choreography: pulses along the incoming edges, a glow while the block computes,
+      the output picture on each block's face, neuron brightness for dense layers, Follow camera.
+- [ ] Still to do in 3D: flatten ribbon, frozen ice, repeat ghosts.
+- [x] Timeline: markers by family, scrub, step, speed, loop, keyboard (Space, ←, →, Home).
+      Group bands are not drawn.
+- [x] Compute: a pure-TypeScript engine in a web worker (ADR-017) for every catalog op, with
+      illustrative values for declared layers (pretrained backbones, custom) and anything after
+      them. Honest labels in the timeline and the Tensor tab.
+- [x] Sample inputs (shapes, stripes, noise) and the user's own picture (read locally).
+- [ ] Teaching kernels for the first convolution.
+- [x] Visualizers: sliding window (conv, pooling) with the filter's weights, attention maps per
+      head, bars for vectors and class probabilities, channel mosaics, token heatmaps.
+- [ ] Visualizers still to do: activation curve, norm histogram before/after, dense matrix,
+      flatten unroll, dropout mask, merge streams, patch grid, position embedding.
+- [x] Inspector Tensor tab (channel grid, histogram, stats).
+
+**Status (2026-11-15):** the core works. 167 tests pass. In the browser, AlexNet ran end to end:
+each block showed its feature maps in 3D and the Tensor tab showed the real values. Full runs take
+about 0.4 s for the mini-ViT, 2 s for AlexNet and 50 s for VGG16 (measured in Node; layers appear
+as they finish, and playback waits for them). **Not verified:** continuous playback and frame rate.
+The preview pane was hidden during testing and drew no animation frames, so only single steps and
+still frames were checked. Pulses, the glow and Follow mode are therefore untested on screen.
 
 **Acceptance:** AlexNet, VGG16 and mini-ViT play end to end at 60 fps on a sample image, with
 real (random-init) feature maps. Every step's narration and formula show correct numbers.
@@ -154,20 +195,48 @@ Scrubbing is deterministic.
 ---
 
 ## Phase 6: Lens
-- [ ] `core/lens`: interval index, ref-role priority resolution, subgraph closure, ghost inputs/outputs.
-- [ ] Selection chip, focus mode (dim, frame, Focus camera, mini-timeline, `Esc`).
-- [ ] `/api/ai/lens` for unmapped selections, plus the sandbox scene.
-- [ ] Config-symbol selection → dependent-node highlighting.
+- [x] `core/lens`: resolve a code selection to a focus by priority (a group's definition or loop,
+      then the layers the lines create, then constants), close gaps between selected layers, and
+      find the layers feeding and reading the focus. It scans the IR's code refs directly; an
+      interval tree is not needed at this size.
+- [x] Selection chip in the Code panel header ("Simulate selection", shortcut `F`), focus mode
+      (everything else dimmed, a frame around the focus, the camera moves to it, the timeline
+      steps only through the focused layers, `Esc` or Exit leaves).
+- [x] Selecting a constant highlights the layers that depend on it (`symbolsUsed` on each node).
+- [ ] `/api/ai/lens` for selections that define no layer of the model, plus the sandbox scene.
+- [ ] Ghost input and output markers at the edge of the focus (the layers are known, not drawn).
+
+**Status (2026-11-15):** done except the AI path for unmapped code. 181 tests pass. Checked in
+the browser on the mini-ViT gallery model: selecting one Transformer block's lines focused its
+9 layers, dimmed the rest, framed it and limited the timeline to 9 steps. The unit tests cover
+the acceptance cases below on the example IR (the block's definition gives one copy of 4;
+`PATCH_SIZE` gives the patch layer). **Not verified:** the same on the real ViT notebook, which
+needs an AI result for it first. Constants only link to layers when the IR was written with
+symbol names, which the AI draft and the gallery models do and the no-AI reader does not.
 
 **Acceptance:** selecting `transformer_block`'s body in N4 focuses one canonical block (×4) and plays it.
 Selecting `PATCH_SIZE = 16` highlights patchify and pos_embed. Selecting N5's `generate_anchors`
-(unmapped) produces an anchors pipeline simulation through Fable.
+(unmapped) produces an anchors pipeline simulation through the AI step.
 
 ## Phase 7: Forge
-- [ ] Palette, editable React Flow graph, live shape validation with fix suggestions, and a stats bar.
-- [ ] Codegen (PyTorch and Keras) from catalog templates. Code → IR through the fast path or Fable.
-- [ ] `/api/ai/forge` (prompt → IR). Templates (ResNet block, MBConv, Transformer encoder, U-Net level, RPN head, CBAM).
-- [ ] Export: `.py`, `.ipynb`, IR JSON. Undo/redo.
+- [x] Palette (20 layers, click or drag onto the view), templates (small CNN, residual block, MLP,
+      Transformer encoder), a settings form per layer, live shape checking with a plain-language
+      fix for each common error, totals and a problem list.
+- [x] The 2D graph is editable in Forge: drag between cards to connect, double-click a line to
+      remove it. Layout stays automatic (cards cannot be placed by hand).
+- [x] Export of runnable code: Keras functional API or a PyTorch `nn.Module`
+      (`src/core/codegen/export.ts`), as `.py`, `.ipynb` or IR JSON. Undo and redo.
+- [x] "Describe a model": plain English → a model, through the AI step (`mode: "design"`).
+- [ ] Code → model inside Forge (paste code). Scope already does this for notebooks.
+- [ ] More templates (MBConv, U-Net level, RPN head, CBAM), repeat groups and grouping in Forge.
+
+**Status (2026-11-15):** built. 200 tests pass. In the browser: the page opened with the small
+CNN, adding a convolution after the classifier was caught as a shape error with a suggested fix,
+a setting change updated the label, undo restored the model, and switching to PyTorch rewrote
+the code. The Forge model simulates like any other. Groq designed a valid CNN from a one-line
+description in 4 s. **Not verified:** the exported scripts pass Python's syntax check, but they
+were not run, because neither PyTorch nor Keras is installed on this machine. Connecting cards
+by dragging in the 2D view and dragging from the palette were not tried in the browser.
 
 **Acceptance:** build a small CNN by drag-and-drop, see a shape error caught, export runnable PyTorch code, and simulate it.
 

@@ -39,8 +39,13 @@ Rules:
   provider and says so. Local-only mode stays available.
 - **Budget:** free tiers cost nothing, but they are rate limited. Show the token estimate before a
   run, and track the Qwen free-token balance so the user does not hit paid usage by accident.
-- Verify each provider's SDK or endpoint details from its current docs when implementing Phase 4.
-  Nothing above about limits or model names has been tested yet.
+- **As built (Phase 4, ADR-015 and ADR-016):** one OpenAI-compatible client serves all four
+  providers; the model writes a forgiving Draft that is expanded into Wire IR; the verify → repair
+  loop runs on the server inside `/api/ai/extract`; results are saved in the browser (IndexedDB)
+  per notebook, so a notebook is sent once. Tested live: Gemini `gemini-2.5-flash` and Groq
+  `openai/gpt-oss-120b`. Not tested: Qwen (no key yet), OpenRouter models, the reference notebooks.
+- Newer Gemini models were overloaded (HTTP 503) or never answered during testing. The client
+  retries an overloaded model twice and gives up after 75 s without a reply.
 
 > **Before you implement anything in this doc, load the `claude-api` skill** and verify each SDK
 > call against it. The snippets below use patterns documented there (as of 2026-11), but the

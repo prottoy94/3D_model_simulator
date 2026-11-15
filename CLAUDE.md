@@ -6,15 +6,44 @@
 
 ## Status
 
-- **Phases 0, 1 and 2 are done (2026-11-14). Next: Phase 3** (3D and 2D visualization) in
-  [docs/08-ROADMAP.md](docs/08-ROADMAP.md). Phase 2 added the Wire/Runtime IR (`src/core/ir`), the
+- **Phases 0–7 are built (2026-11-15). Next: Phase 8 (breadth)** in [docs/08-ROADMAP.md](docs/08-ROADMAP.md).
+  Phase 7 added Forge: `src/core/forge` (pure edits on a Draft, templates, fix suggestions),
+  `src/core/codegen/export.ts` (runnable Keras and PyTorch), `useForgeStore` (document, undo,
+  local save) and `src/features/forge`. Forge shows its model through `useModelStore` with
+  source `"forge"`, so the 3D/2D views, the simulation and the inspector are reused as they are.
+  Phase 6 added Lens: `src/core/lens` maps selected code to a focus, `useModelStore.focus` holds
+  it, the views dim everything outside it, and the sim plan is filtered to it (`focusPlan`).
+  Not built: AI analysis of code that defines no layer.
+  Open items: the AI eval on the reference notebooks (needs the user's go-ahead) and checking
+  continuous playback on screen. Phase 5 added the simulation: `src/core/sim` (kernels, runner,
+  views, plan; ADR-017), a web worker (`src/features/sim/sim.worker.ts`), `useSimStore` with the
+  clock in `simClock`, the timeline bar, `sim-layer.tsx` in the 3D view and the Tensor tab.
+  Phase 4 added the AI step: `src/core/ai` (Draft format, prompt, context slicer, problem
+  reports), `src/core/zoo` (backbone facts), `src/server/ai` (providers, verify → repair loop),
+  `/api/ai/providers` and `/api/ai/extract`, and `src/features/ai` (menu, Analyze panel).
+  AI results are saved per notebook in IndexedDB. Phase 3 added the layout core (`src/core/layout`), the 3D
+  model view, the 2D graph (React Flow), the Layer inspector, two-way code ↔ model linking, the
+  model picker and three gallery models. `useModelStore` holds the IR on screen, the selection
+  and the collapsed groups; every view reads it. Phase 2 added the Wire/Runtime IR (`src/core/ir`), the
   op catalog (`src/core/ops`), the shape engine and summary verification (`src/core/shapes`) and
   the no-AI reader for simple layer stacks (`src/core/fastpath`). `buildRuntimeIR(wire, { summaries })`
   is the one entry point from Wire IR to everything a view needs. What works now: drop a notebook → it is parsed and
   stripped in the browser, every cell gets a role, constants are resolved, saved `model.summary()`
   outputs are parsed, and Scope shows the Notebook Map, the code (Monaco) and a notebook inspector.
   No AI and no 3D model yet. Playwright is deferred to Phase 3.
-- Phases 1 and 2 are not committed yet (Phase 0 is commit `82e988f`).
+- Phases 1 and 2 are commit `854619b`. Phases 3 to 7 are not committed yet.
+- PyTorch and Keras are not installed here: exported code can only be syntax-checked
+  (`python -m py_compile .cache/forge-export/*.py` after `pnpm test`).
+- In the browser, `window.monaco.editor.getEditors()[0]` gives the code editor (use it to set a
+  selection when testing Lens).
+- The preview pane draws no animation frames while it is hidden (`requestAnimationFrame` does not
+  fire). Each screenshot renders one frame, so check animation by stepping and taking stills.
+- **Never send the user's notebooks to an AI provider without asking** (free tiers may train on
+  inputs). Test the AI flow with toy code written for the test.
+- Bash heredocs break on long or quote-heavy content here: write a script file and run it.
+- Never use drei `Html` for labels (React 19 logs unmount errors): use the DOM overlay in
+  `src/features/viewport-3d/labels.tsx`. Monaco also creates `<canvas>` elements, so select the
+  three.js canvas by `data-engine`.
 - Notebook fixtures are local and git-ignored (ADR-011). Scripts are ESM: `scripts/*.mts`, run with `tsx`.
 - **Next 16 has breaking changes** (`cacheComponents` is on; `LayoutProps` types come from
   `next typegen`). Read `node_modules/next/dist/docs/` before writing Next code.
@@ -118,7 +147,9 @@ pnpm format         # prettier
 pnpm make-fixture <notebook.ipynb> <short-name>    # stripped local test copy
 pnpm build-ir-fixtures                             # regenerate fixtures/ir/*.json from src/core/ir/examples.ts
 pnpm tsx scripts/inspect-notebook.mts <file>       # print roles, constants, summaries
-# planned: pnpm test:e2e (playwright), pnpm eval:ai (COSTS MONEY: ask the user first)
+pnpm tsx scripts/bench-sim.mts                     # time a full simulation of the gallery models
+pnpm eval:ai <provider> <model> <notebook.ipynb>…  # needs `pnpm dev`; SENDS CODE TO THE PROVIDER: ask the user first
+# planned: pnpm test:e2e (playwright)
 ```
 
 ## Repository layout (planned)
@@ -132,12 +163,14 @@ src/core/ir/             Zod schemas (wire + runtime), normalize, validate, patc
 src/core/ops/            op catalog (one file per op family)
 src/core/shapes/         shape / param / FLOP engine + verification against summaries
 src/core/fastpath/       no-AI reader for Keras Sequential / nn.Sequential
-src/core/zoo/            pretrained backbone templates (JSON) + resolver
-src/core/layout/         3D + 2D layout, collapse / LOD
-src/core/sim/            sim plan compiler, clock, tensor backends (tfjs, symbolic)
-src/core/lens/           code range ↔ node mapping, subgraph extraction
-src/core/codegen/        IR → PyTorch / Keras code
-src/server/ai/           Anthropic client, prompts, tasks, result cache, cost guard
+src/core/zoo/            pretrained backbone facts (templates later) + resolver
+src/core/layout/         visible graph (collapse), 3D river layout, 2D card layout
+src/core/sim/            compute kernels, runner, tensor views, sim plan (pure TS, ADR-017)
+src/core/lens/           code selection → focus (layers, block copy, group, or constant)
+src/core/codegen/        IR → code listing (gallery) and runnable Keras / PyTorch scripts (Forge)
+src/core/forge/          Forge edits on a Draft, palette, templates, fix suggestions
+src/core/ai/             Draft format, prompts, context slicer, problem reports (pure)
+src/server/ai/           provider client (OpenAI-compatible), verify → repair loop
 src/features/*           UI feature modules (notebook-map, editor, viewport-3d, graph-2d,
                          inspector, visualizers, timeline, neural-log, forge, command-palette)
 src/components/ui/       design-system primitives (GlassPanel, NeonButton, HudReadout, ...)

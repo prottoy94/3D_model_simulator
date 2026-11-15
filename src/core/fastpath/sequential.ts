@@ -340,7 +340,12 @@ export function extractSequentialModels(
         "Read directly from the code without AI. Every layer and argument was resolved statically.",
       framework: frameworks.size === 1 ? found[0]!.framework : "mixed",
     });
-    for (const name of seeded) {
+    // Only list the class-count names the notebook's code actually uses.
+    const code = notebook.cells
+      .filter((cell) => cell.kind === "code")
+      .map((cell) => cell.source)
+      .join("\n");
+    for (const name of seeded.filter((candidate) => new RegExp(`\\b${candidate}\\b`).test(code))) {
       b.symbol(name, classCount, {
         provenance: "from-output",
         note: "number of classes reported in the notebook's outputs",

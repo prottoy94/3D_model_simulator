@@ -1,5 +1,9 @@
 import Dexie, { type EntityTable } from "dexie";
+import type { Draft } from "@/core/ai/draft";
 import type { Notebook } from "@/core/notebook";
+
+/** Which provider and model produced a saved AI result. */
+export type AiSource = { provider: string; model: string };
 
 /**
  * A notebook the user opened, stored locally in IndexedDB. Only the stripped,
@@ -13,6 +17,9 @@ export type StoredProject = {
   notebook: Notebook;
   originalBytes: number;
   openedAt: number;
+  /** The AI's description of the architecture, kept so the same notebook is never sent twice. */
+  draft?: Draft;
+  aiSource?: AiSource;
 };
 
 let database: (Dexie & { projects: EntityTable<StoredProject, "hash"> }) | null = null;
@@ -30,6 +37,10 @@ function db() {
 
 export async function saveProject(project: StoredProject): Promise<void> {
   await db().projects.put(project);
+}
+
+export async function loadProject(hash: string): Promise<StoredProject | undefined> {
+  return db().projects.get(hash);
 }
 
 export async function loadLatestProject(): Promise<StoredProject | undefined> {

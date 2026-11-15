@@ -89,10 +89,18 @@ export function verifyModel({ nodes, groups, summary }: VerifyInput): ModelVerif
     return nodes.filter((node) => ids.has(node.groupId));
   };
 
-  for (const row of summary.rows) {
+  // A pretrained backbone is one node here but hundreds of rows in the summary. Its
+  // rows are not compared one by one: only the rows after it (the head) are paired.
+  const lastBackbone = nodes.findLastIndex((node) => node.op === "backbone");
+  const tail = lastBackbone < 0 ? null : nodes.slice(lastBackbone + 1);
+  const comparedRows =
+    tail === null ? summary.rows : tail.length === 0 ? [] : summary.rows.slice(-tail.length);
+  const candidates = tail ?? nodes;
+
+  for (const row of comparedRows) {
     const ops = opsForRow(row);
     const isWrapper = row.type === "TimeDistributed";
-    const node = nodes.find(
+    const node = candidates.find(
       (candidate) =>
         !used.has(candidate.id) &&
         (isWrapper
