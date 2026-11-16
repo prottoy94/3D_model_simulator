@@ -180,7 +180,8 @@ describe("problems are reported, not hidden", () => {
       .model("m", "Net")
       .node("n_in", "input", { shape: [8] })
       .node("n_bad", "dense", { units: "many" }, { from: ["n_in"] })
-      .node("n_lstm", "lstm", { units: 4 }, { from: ["n_in"] })
+      // conv3d is in the IR vocabulary but has no catalog entry yet.
+      .node("n_lstm", "conv3d", { filters: 4 }, { from: ["n_in"] })
       .node("n_add", "add", {}, { from: ["n_in"] })
       .node("n_orphan", "relu", {}, { from: ["n_missing"] })
       .build();

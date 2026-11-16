@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { cellAtLine, editorLineFor } from "@/core/notebook/document";
 import { readToken } from "@/lib/tokens";
 import { useModelStore } from "@/stores/model-store";
+import { usePrefsStore, useSkin } from "@/stores/prefs-store";
 import { useProjectStore } from "@/stores/project-store";
 import { buildCodeLinks, idsAtLine, type CodeLink } from "./code-links";
 import { focusForEditorLines } from "./lens-selection";
@@ -53,7 +54,7 @@ export function CodeEditor() {
   const defineTheme: BeforeMount = (monaco) => {
     const hex = (name: `--${string}`) => readToken(name).replace("#", "");
     monaco.editor.defineTheme(THEME, {
-      base: "vs-dark",
+      base: usePrefsStore.getState().theme === "light" ? "vs" : "vs-dark",
       inherit: true,
       rules: [
         { token: "comment", foreground: hex("--text-3") },
@@ -68,17 +69,26 @@ export function CodeEditor() {
         "editor.foreground": readToken("--text-1"),
         "editorLineNumber.foreground": readToken("--text-3"),
         "editorLineNumber.activeForeground": readToken("--accent"),
-        "editor.lineHighlightBackground": "#22d3ee10",
+        "editor.lineHighlightBackground": `${readToken("--accent")}14`,
         "editor.lineHighlightBorder": "#00000000",
-        "editor.selectionBackground": "#22d3ee40",
+        "editor.selectionBackground": `${readToken("--accent")}40`,
         "editorCursor.foreground": readToken("--accent"),
         "editorGutter.background": "#00000000",
         "scrollbarSlider.background": "#82beff24",
         "scrollbarSlider.hoverBackground": "#82beff48",
-        "editorWidget.background": "#04060c",
+        "editorWidget.background": readToken("--bg-deep"),
       },
     });
   };
+
+  // A new theme or palette: define the editor theme again from the tokens.
+  const skin = useSkin();
+  useEffect(() => {
+    const monaco = monacoRef.current;
+    if (!monaco) return;
+    defineTheme(monaco);
+    monaco.editor.setTheme(THEME);
+  }, [skin]);
 
   const applyDecorations = () => {
     const editor = editorRef.current;

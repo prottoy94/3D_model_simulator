@@ -20,6 +20,8 @@ export type RuntimeNode = Omit<WireNode, "params"> & {
   /** Typed by the op's catalog schema, with framework defaults applied. */
   params: Record<string, unknown>;
   wrapper: "time_distributed" | null;
+  /** The node whose weights this one reuses, when it is another application of the same layer. */
+  sharedWith: string | null;
   inShapes: TensorShape[];
   /** null when inference failed and there was no claimed shape to fall back on. */
   outShape: TensorShape | null;

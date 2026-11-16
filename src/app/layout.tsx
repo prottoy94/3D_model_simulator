@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Chakra_Petch, Exo_2, JetBrains_Mono, Michroma } from "next/font/google";
+import { PrefsSync } from "@/features/shell/display-menu";
 import "./globals.css";
 
 // Body: Exo 2 (geometric, technical). Display: Chakra Petch (angular HUD lettering).
@@ -25,7 +26,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${body.variable} ${display.variable} ${brand.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <PrefsSync />
+        {children}
+      </body>
     </html>
   );
 }

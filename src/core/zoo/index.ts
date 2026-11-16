@@ -17,6 +17,8 @@ export type ZooEntry = {
   output:
     | { kind: "image"; stride: number; channels: number }
     | { kind: "tokens"; patch: number; width: number; classToken: boolean };
+  /** Intermediate feature maps a model may read (stage 1 first): stride and channels of each. */
+  stages?: Array<{ stride: number; channels: number }>;
   /** All weights of the feature extractor, including BatchNorm statistics in Keras. */
   params: number;
   /** Weights that are never trained (Keras BatchNorm moving statistics). */
@@ -92,6 +94,12 @@ export const ZOO: ZooEntry[] = [
     aliases: ["convnext_tiny", "ConvNeXt_Tiny"],
     framework: "pytorch",
     output: { kind: "image", stride: 32, channels: 768 },
+    stages: [
+      { stride: 4, channels: 96 },
+      { stride: 8, channels: 192 },
+      { stride: 16, channels: 384 },
+      { stride: 32, channels: 768 },
+    ],
     params: 27_818_592,
     nonTrainable: 0,
     verified: "library",
@@ -135,6 +143,27 @@ export type ZooFacts = {
 };
 
 /** Facts for a backbone fed with images of the given size (height, width). */
+/**
+ * The feature map after one stage of a backbone (1 = the first stage). The
+ * weights are counted on the backbone node itself, so a tap has none.
+ */
+export function resolveZooStage(
+  name: string,
+  stage: number,
+  imageSize: [number, number] = [224, 224],
+  framework?: "keras" | "pytorch",
+): { entry: ZooEntry; outputShape: number[] } | null {
+  const entry = findZooEntry(name, framework);
+  const info = entry?.stages?.[stage - 1];
+  if (!entry || !info) return null;
+  const h = Math.ceil(imageSize[0] / info.stride);
+  const w = Math.ceil(imageSize[1] / info.stride);
+  return {
+    entry,
+    outputShape: entry.framework === "pytorch" ? [info.channels, h, w] : [h, w, info.channels],
+  };
+}
+
 export function resolveZoo(
   name: string,
   imageSize: [number, number] = [224, 224],

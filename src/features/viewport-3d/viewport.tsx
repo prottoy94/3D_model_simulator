@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NeonButton, SegmentedControl } from "@/components/ui";
 import { formatCount } from "@/core/format";
 import { layoutModel3D } from "@/core/layout";
@@ -9,8 +9,10 @@ import { describeFocus } from "@/core/lens";
 import { AnalyzePanel } from "@/features/ai/analyze-panel";
 import { useAiStore } from "@/stores/ai-store";
 import { useModelStore } from "@/stores/model-store";
+import { useSkin } from "@/stores/prefs-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useUiStore, type ViewMode } from "@/stores/ui-store";
+import { downloadSnapshot } from "./export-png";
 import { LabelOverlay, type LabelRegistry } from "./labels";
 
 // three.js needs a real WebGL context, so the scene never renders on the server.
@@ -64,6 +66,16 @@ export function Viewport() {
   useEffect(() => {
     setPanelOpen(null);
   }, [notebookHash, setPanelOpen]);
+  const skin = useSkin();
+  const stage = useRef<HTMLDivElement>(null);
+  const [saveNote, setSaveNote] = useState<string | null>(null);
+  // A new skin remounts the 3D scene with a fresh camera, so frame the model again.
+  const shownSkin = useRef(skin);
+  useEffect(() => {
+    if (shownSkin.current === skin) return;
+    shownSkin.current = skin;
+    useModelStore.getState().requestFit();
+  }, [skin]);
   const collapsedSet = useMemo(() => new Set(collapsed), [collapsed]);
   const layout = useMemo(
     () => (ir && activeModelId ? layoutModel3D(ir, activeModelId, collapsedSet) : null),
@@ -75,7 +87,9 @@ export function Viewport() {
   const hasGroups = (layout?.frames.length ?? 0) > 0 || collapsed.length > 0;
 
   // The Analyze panel opens by itself when a notebook has model code that could not be read without AI.
-  const hasNotebook = notebookHash !== undefined && source === "notebook";
+  // `source` is null while a notebook has no architecture yet, which is exactly when the
+  // Analyze panel is needed, so only a gallery or Forge model on screen hides it.
+  const hasNotebook = notebookHash !== undefined && source !== "gallery" && source !== "forge";
   const needsAi = hasNotebook && !ir && (modelCells?.length ?? 0) > 0;
   const showPanel = hasNotebook && (analyzing || (panelChoice ?? needsAi));
 
@@ -101,9 +115,25 @@ export function Viewport() {
     banner = `${modelCells.length} model ${modelCells.length === 1 ? "cell" : "cells"} found · analyze with AI to build the architecture`;
   }
 
+  const savePicture = () => {
+    if (!stage.current || !model) return;
+    const name = model.name
+      .replace(/[^a-z0-9]+/gi, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase();
+    const saved = downloadSnapshot(stage.current, banner, `neuroscope-${name || "model"}.png`);
+    setSaveNote(saved ? "Picture saved" : "Could not save the picture");
+    window.setTimeout(() => setSaveNote(null), 2500);
+  };
+
   return (
-    <div className="relative h-full min-h-0 w-full overflow-hidden rounded-panel border border-line bg-deep">
-      {viewMode === "3d" ? <Scene layout={layout} labels={labels} /> : <GraphView />}
+    <div
+      ref={stage}
+      data-tour="viewport"
+      className="relative h-full min-h-0 w-full overflow-hidden rounded-panel border border-line bg-deep"
+    >
+      {/* WebGL materials read the color tokens once, so a new skin remounts the scene. */}
+      {viewMode === "3d" ? <Scene key={skin} layout={layout} labels={labels} /> : <GraphView />}
       {viewMode === "3d" && layout ? <LabelOverlay layout={layout} registry={labels} /> : null}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-center p-4">
@@ -157,6 +187,16 @@ export function Viewport() {
                 <NeonButton size="sm" onClick={requestFit}>
                   Overview
                 </NeonButton>
+                <NeonButton
+                  size="sm"
+                  onClick={savePicture}
+                  title="Save this view as a PNG picture, with its labels and a caption"
+                >
+                  Save picture
+                </NeonButton>
+                <span role="status" className="text-[11px] text-text-2">
+                  {saveNote}
+                </span>
               </>
             ) : null}
           </>

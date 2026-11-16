@@ -65,3 +65,84 @@
   --shadow-panel: 0 0 0 1px var(--glass-border), 0 8px 40px rgba(0, 0, 0, 0.7);
   --glow-accent: 0 0 0 1px rgba(34, 211, 238, 0.5), 0 0 24px rgba(34, 211, 238, 0.25);
 }
+
+/* ── Light theme: the same tokens on a pale stage (Display menu). ── */
+:root[data-theme="light"] {
+  --bg-void: #eef2f8;
+  --bg-deep: #e4e9f2;
+  --grid-line: rgba(30, 60, 140, 0.08);
+
+  --glass-1: rgba(255, 255, 255, 0.84);
+  --glass-2: rgba(246, 248, 252, 0.95);
+  --glass-border: rgba(20, 50, 110, 0.16);
+  --glass-border-strong: rgba(20, 50, 110, 0.36);
+  --glass-highlight: linear-gradient(
+    135deg,
+    rgba(14, 116, 144, 0.3),
+    rgba(162, 28, 175, 0.1) 40%,
+    transparent 70%
+  );
+
+  --text-1: #0c1424;
+  --text-2: #364559;
+  --text-3: #56657e;
+
+  --accent: #0e7490;
+  --accent-2: #a21caf;
+  --ok: #3f6212;
+  --warn: #b45309;
+  --error: #be123c;
+  --frozen: #1d4ed8;
+
+  --op-io: #475569;
+  --op-conv: #0891b2;
+  --op-pool: #7c3aed;
+  --op-norm: #0d9488;
+  --op-act: #65a30d;
+  --op-linear: #d97706;
+  --op-attn: #c026d3;
+  --op-recur: #0284c7;
+  --op-shape: #64748b;
+  --op-merge: #1e293b;
+  --op-reg: #94a3b8;
+  --op-det: #ea580c;
+  --op-classic: #a16207;
+  --op-custom: #e11d48;
+
+  --shadow-panel: 0 0 0 1px var(--glass-border), 0 8px 30px rgba(30, 50, 90, 0.14);
+  --glow-accent: 0 0 0 1px rgba(14, 116, 144, 0.5), 0 0 18px rgba(14, 116, 144, 0.2);
+}
+
+/*
+ * ── Colorblind-safe palette (Display menu): the Okabe–Ito colors, which stay
+ * apart for the common kinds of color blindness. There are more layer families
+ * than safe colors, so rare families share a hue at a different lightness.
+ */
+:root[data-palette="safe"] {
+  --ok: #56b4e9;
+  --warn: #f0e442;
+  --error: #d55e00;
+
+  --op-conv: #56b4e9;
+  --op-pool: #cc79a7;
+  --op-norm: #009e73;
+  --op-act: #f0e442;
+  --op-linear: #e69f00;
+  --op-attn: #d55e00;
+  --op-recur: #0072b2;
+  --op-det: #ffd9a0;
+  --op-classic: #f7f2a8;
+  --op-custom: #f3c4dc;
+}
+
+:root[data-theme="light"][data-palette="safe"] {
+  --ok: #0072b2;
+  --warn: #8a6d00;
+  --error: #b84a00;
+
+  --op-conv: #2f8fcf;
+  --op-act: #9a8f00;
+  --op-det: #8a5a00;
+  --op-classic: #6f6800;
+  --op-custom: #9c4f7c;
+}

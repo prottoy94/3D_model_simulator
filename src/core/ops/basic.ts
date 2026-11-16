@@ -141,7 +141,7 @@ const activationParams = z.object({ axis: z.number().int().default(-1) });
 
 type ActivationParams = z.infer<typeof activationParams>;
 
-type ActivationInfo = {
+export type ActivationInfo = {
   op: OpKind;
   title: string;
   keras: string[];
@@ -152,7 +152,7 @@ type ActivationInfo = {
   kerasCode: string;
 };
 
-function activationOp(info: ActivationInfo): AnyOpSpec {
+export function activationOp(info: ActivationInfo): AnyOpSpec {
   return defineOp<ActivationParams>({
     op: info.op,
     family: "activation",

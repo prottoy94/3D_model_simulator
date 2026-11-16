@@ -73,6 +73,7 @@ export function LabelOverlay({
           ref={register(frameKey(frame.groupId))}
           type="button"
           title="Collapse this group"
+          data-snapshot-label
           onClick={() => toggleGroup(frame.groupId)}
           style={{ opacity: 0 }}
           className="hud-label pointer-events-auto absolute left-0 top-0 origin-bottom-left whitespace-nowrap rounded-t-[6px] border border-b-0 border-line bg-glass-1 px-2 py-0.5 !text-[10px] will-change-transform hover:!text-accent"
@@ -87,6 +88,7 @@ export function LabelOverlay({
             key={item.id}
             ref={register(itemKey(item.id))}
             data-strong={isStrong}
+            data-snapshot-label
             style={{ opacity: 0 }}
             className={
               isStrong

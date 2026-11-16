@@ -1,9 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { Chip, HudReadout, type ReadoutSource } from "@/components/ui";
 import { formatCompact, formatCount } from "@/core/format";
 import type { NodeStatus, RuntimeGroup, RuntimeIR, RuntimeNode } from "@/core/ir";
 import { FAMILY_COLOR_TOKEN, getOp } from "@/core/ops";
+import { coverage, describeField, receptiveFields, type ReceptiveField } from "@/core/receptive";
 import { shapeText } from "@/core/shapes";
 import { useModelStore } from "@/stores/model-store";
 import { useProjectStore } from "@/stores/project-store";
@@ -56,7 +58,7 @@ export function LayerInspector() {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [overflow-wrap:anywhere]">
       {node ? (
-        <NodeDetails ir={ir} node={node} />
+        <NodeDetails ir={ir} node={node} modelId={activeModelId} />
       ) : group ? (
         <GroupDetails ir={ir} group={group} />
       ) : (
@@ -223,8 +225,11 @@ function Assumption({ name, value, note }: { name: string; value: string; note: 
   );
 }
 
-function NodeDetails({ ir, node }: { ir: RuntimeIR; node: RuntimeNode }) {
+function NodeDetails({ ir, node, modelId }: { ir: RuntimeIR; node: RuntimeNode; modelId: string }) {
   const spec = getOp(node.op);
+  const fields = useMemo(() => receptiveFields(ir, modelId), [ir, modelId]);
+  // Only image models have a receptive field in pixels.
+  const imageModel = Object.values(fields).some((field) => field !== null);
   const status = STATUS[node.status];
   const trust: ReadoutSource =
     node.status === "mismatch" || node.status === "error"
@@ -290,6 +295,8 @@ function NodeDetails({ ir, node }: { ir: RuntimeIR; node: RuntimeNode }) {
         <p className="pt-0.5 text-[11px] text-text-3">B is the batch size.</p>
       </Section>
 
+      {imageModel && node.op !== "input" ? <FieldSection field={fields[node.id] ?? null} /> : null}
+
       <Section title="Weights">
         <HudReadout label="Params" value={formatCount(total)} source={trust} />
         {total > 0 ? (
@@ -337,6 +344,71 @@ function NodeDetails({ ir, node }: { ir: RuntimeIR; node: RuntimeNode }) {
 
       <CodeRefs refs={node.refs} />
     </>
+  );
+}
+
+/** How much of the input picture one output position of this layer can see. */
+function FieldSection({ field }: { field: ReceptiveField | null }) {
+  if (!field) {
+    return (
+      <Section title="Receptive field">
+        <p className="text-xs leading-relaxed text-text-3">
+          Unknown here: this layer comes after a pretrained or custom layer whose inside is not
+          described, so its window on the input cannot be computed.
+        </p>
+      </Section>
+    );
+  }
+  const [coverH, coverW] = coverage(field);
+  const share = Math.round(coverH * coverW * 100);
+  const size = 56;
+  return (
+    <Section title="Receptive field">
+      <div className="flex items-start gap-3">
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 100 100"
+          role="img"
+          aria-label={`The field covers ${share}% of the input picture`}
+          className="mt-1 shrink-0"
+        >
+          <rect
+            x="1"
+            y="1"
+            width="98"
+            height="98"
+            fill="none"
+            stroke="var(--glass-border-strong)"
+            strokeWidth="2"
+          />
+          <rect
+            x={50 - Math.max(3, coverW * 98) / 2}
+            y={50 - Math.max(3, coverH * 98) / 2}
+            width={Math.max(3, coverW * 98)}
+            height={Math.max(3, coverH * 98)}
+            fill="color-mix(in srgb, var(--accent) 30%, transparent)"
+            stroke="var(--accent)"
+            strokeWidth="2"
+          />
+        </svg>
+        <div className="min-w-0 flex-1">
+          <HudReadout label="One output sees" value={describeField(field)} source="computed" />
+          <HudReadout label="Of the picture" value={`${share}%`} />
+          {field.global ? null : (
+            <HudReadout
+              label="Step between outputs"
+              value={`${Number(field.jump[0].toFixed(2))} × ${Number(field.jump[1].toFixed(2))} px`}
+            />
+          )}
+        </div>
+      </div>
+      <p className="pt-1 text-[11px] leading-snug text-text-3">
+        {field.global
+          ? "A layer before this one mixed every position, so each value depends on the whole picture."
+          : `Input picture: ${field.input[0]} × ${field.input[1]} px. This is the theoretical window, from kernel sizes and strides. The area that matters most in a trained model is smaller.`}
+      </p>
+    </Section>
   );
 }
 

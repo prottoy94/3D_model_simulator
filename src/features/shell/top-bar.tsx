@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { SegmentedControl } from "@/components/ui";
 import { AiMenu } from "@/features/ai/ai-menu";
+import { CompareDialog } from "@/features/compare/compare-dialog";
 import { useModelStore } from "@/stores/model-store";
 import { useProjectStore } from "@/stores/project-store";
+import { DisplayMenu } from "./display-menu";
 import { OpenNotebookButton } from "./open-notebook-button";
 
 type Workspace = "scope" | "forge";
@@ -25,6 +28,7 @@ export function TopBar() {
   const activeModelId = useModelStore((state) => state.activeModelId);
   const setActiveModel = useModelStore((state) => state.setActiveModel);
   const isForge = useModelStore((state) => state.source === "forge");
+  const [comparing, setComparing] = useState(false);
   const projectName = isForge
     ? `Forge · ${models?.[0]?.name ?? "model"}`
     : isGallery
@@ -84,7 +88,21 @@ export function TopBar() {
 
       <OpenNotebookButton onOpened={() => router.push("/scope")} />
 
-      <AiMenu />
+      <div data-tour="tools" className="flex items-center gap-1">
+        {models && models.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setComparing(true)}
+            className="flex h-8 items-center rounded-control border border-transparent px-2 text-xs font-bold text-text-1 transition-colors hover:border-line"
+          >
+            Compare
+          </button>
+        ) : null}
+        <DisplayMenu tour={current === "scope"} />
+        <AiMenu />
+      </div>
+
+      {comparing ? <CompareDialog onClose={() => setComparing(false)} /> : null}
     </header>
   );
 }

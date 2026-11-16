@@ -241,17 +241,52 @@ by dragging in the 2D view and dragging from the palette were not tried in the b
 **Acceptance:** build a small CNN by drag-and-drop, see a shape error caught, export runnable PyTorch code, and simulate it.
 
 ## Phase 8: Breadth
-- [ ] Zoo: ResNet50, VGG16, ConvNeXt-T, ViT-B/16 (KerasHub), YOLOv8n, torchvision ResNet50.
-- [ ] Detection: anchor_generator, roi_pool/roi_align, box_decode, nms ops and visualizers; pipeline stages.
-- [ ] Attention modules: channel/spatial attention, squeeze-excite (FireNet ✓).
-- [ ] NLP: embedding, rnn/lstm/gru (recurrent-unroll), Transformer encoder/decoder with masks, a toy tokenizer.
-- [ ] Classical ML (`estimator` + visualizers): decision tree, random forest, logistic regression, k-means, SVM, PCA.
+- [x] Attention modules: `channel_attention` and `spatial_attention` (CBAM), `squeeze_excite`.
+- [x] `groupnorm`, four more activations (`tanh`, `silu`, `leaky_relu`, `hardswish`),
+      `global_max_pool`, `adaptive_avg_pool2d`, `upsample`, `reduce_mean`, `reduce_max`.
+- [x] Recurrent layers: `rnn`, `lstm`, `gru` (with `bidirectional` as a setting), counted the
+      Keras and the PyTorch way, and really computed in the simulation.
+- [x] Detection: `anchor_generator` (with `roi_pool` from Phase 2). The catalog now has 45 ops,
+      and every one of them is computed by the simulator.
+- [x] Shared weights (`sharedWith` on a node): a head applied to several scales is counted once.
+- [x] Backbone stage taps (`stage` on a `backbone` node), with stage facts for ConvNeXt-Tiny.
+- [x] **FireNet (N6) is a gallery model**, written by hand from the notebook: 32,183,742
+      parameters and 9,261 anchors, both matching what the notebook prints.
+- [ ] Detection still to do: `roi_align`, `box_decode`, `nms`, and pipeline stages as views.
+- [ ] Zoo still to do: layer-by-layer templates, YOLOv8n, stage facts for the other backbones.
+- [ ] NLP still to do: Transformer decoder with masks, a toy tokenizer, `conv1d`.
+- [ ] Classical ML (`estimator` and its visualizers): not started.
+
+**Status (2026-11-16):** the part that matters for the reference notebooks is done. 210 tests
+pass. The new parameter formulas were checked against known values (Keras LSTM(64) on 32 inputs
+= 24,832; PyTorch = 25,088; GRU = 18,816) and against FireNet's printed total. In the browser the
+FireNet gallery model opened and drew. **Not done:** see the open boxes above. The FireNet model
+was written by hand, not produced by the AI step, so it says nothing about AI accuracy.
 
 ## Phase 9: Polish and P2 features
-- [ ] Compare mode, training replay from logs, receptive-field explorer.
+- [x] Receptive-field explorer: `src/core/receptive` computes the theoretical field of every
+      layer of an image model; the Layer inspector shows it with a small picture.
+- [x] Compare mode: `src/core/compare` + the Compare dialog in the top bar (the model on screen
+      next to another model of the notebook or a gallery model).
+- [x] Light theme and a colorblind-safe palette (Okabe–Ito), in the Display menu. Both are token
+      overrides in `src/styles/tokens.css`, chosen by `data-theme` / `data-palette` on `<html>`.
+- [x] Export PNG: "Save picture" in the 3D view (scene + labels + a caption).
+- [x] Onboarding tour: five stops, shown once, replayable from the Display menu.
+- [ ] Training replay from logs.
 - [ ] Real weights (ONNX / `.keras`) → Tier 2.
-- [ ] Export PNG/MP4, onboarding tour, light theme, colorblind palette, sound.
-- [ ] Performance pass (workers, texture budgets), an accessibility audit (the `design:accessibility-review` skill).
+- [ ] Export MP4, sound.
+- [ ] Performance pass (workers, texture budgets), a full accessibility audit
+      (the `design:accessibility-review` skill).
+
+**Status (2026-11-16):** the five checked items are built. 218 tests pass (8 new: receptive
+fields against textbook values, VGG16 = 212 px with a 32 px step after the last pooling layer;
+model stats against the engine's totals). Checked in the browser on the VGG16 gallery model: the
+tour walks its five stops, the inspector shows 44 × 44 px for the third pooling layer, the
+Compare dialog fills in for AlexNet and FireNet, the light theme and the safe palette redraw the
+3D view, the editor and the panels, and the saved picture contains the scene, labels and caption.
+**Not done:** see the open boxes. The receptive field is unknown after a pretrained backbone or a
+custom layer. PNG export covers the 3D view only, not the 2D graph. The light theme was only
+looked at in Scope, not on every screen (Forge, the landing page, the Analyze panel).
 
 ---
 

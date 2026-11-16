@@ -1,0 +1,343 @@
+/**
+ * Compute for the Phase 8 layers. Same rules as kernels.ts: real arithmetic on
+ * the sample, untrained seeded weights, channel-last tensors without a batch.
+ */
+import type { OpKind } from "../ops/kinds";
+import { activate, linear, tensor, type Kernel } from "./kernels";
+import { canonicalAxis, fillUniform, glorotLimit, sizeOf } from "./tensor";
+
+const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
+const elementwise =
+  (name: string): Kernel =>
+  ([x]) => {
+    const data = Float32Array.from(x!.data);
+    activate(data, name, x!.shape[x!.shape.length - 1] ?? 1);
+    return tensor(x!.shape, data);
+  };
+
+const groupnorm: Kernel = ([x], p) => {
+  const channels = x!.shape[x!.shape.length - 1]!;
+  const groups = Number(p.groups ?? 32);
+  const size = channels / groups;
+  const positions = x!.data.length / channels;
+  const epsilon = Number(p.epsilon ?? 1e-5);
+  const out = new Float32Array(x!.data.length);
+  for (let g = 0; g < groups; g++) {
+    let mean = 0;
+    for (let pos = 0; pos < positions; pos++) {
+      for (let c = 0; c < size; c++) mean += x!.data[pos * channels + g * size + c]!;
+    }
+    mean /= positions * size;
+    let variance = 0;
+    for (let pos = 0; pos < positions; pos++) {
+      for (let c = 0; c < size; c++)
+        variance += (x!.data[pos * channels + g * size + c]! - mean) ** 2;
+    }
+    const scale = 1 / Math.sqrt(variance / (positions * size) + epsilon);
+    for (let pos = 0; pos < positions; pos++) {
+      for (let c = 0; c < size; c++) {
+        const at = pos * channels + g * size + c;
+        out[at] = (x!.data[at]! - mean) * scale;
+      }
+    }
+  }
+  return tensor(x!.shape, out);
+};
+
+/** Per-channel average and maximum over every position. */
+function channelSummaries(
+  data: Float32Array,
+  channels: number,
+): { avg: Float32Array; max: Float32Array } {
+  const positions = data.length / channels;
+  const avg = new Float32Array(channels);
+  const max = new Float32Array(channels).fill(-Infinity);
+  for (let pos = 0; pos < positions; pos++) {
+    for (let c = 0; c < channels; c++) {
+      const value = data[pos * channels + c]!;
+      avg[c]! += value;
+      if (value > max[c]!) max[c] = value;
+    }
+  }
+  for (let c = 0; c < channels; c++) avg[c]! /= positions;
+  return { avg, max };
+}
+
+const globalMaxPool: Kernel = ([x], _p, ctx) =>
+  tensor(ctx.expected, channelSummaries(x!.data, x!.shape[x!.shape.length - 1]!).max);
+
+const adaptiveAvgPool2d: Kernel = ([x], _p, ctx) => {
+  const [h, w, c] = x!.shape as [number, number, number];
+  const [oh, ow] = ctx.expected as [number, number, number];
+  const out = new Float32Array(oh * ow * c);
+  for (let oy = 0; oy < oh; oy++) {
+    const y0 = Math.floor((oy * h) / oh);
+    const y1 = Math.ceil(((oy + 1) * h) / oh);
+    for (let ox = 0; ox < ow; ox++) {
+      const x0 = Math.floor((ox * w) / ow);
+      const x1 = Math.ceil(((ox + 1) * w) / ow);
+      const count = (y1 - y0) * (x1 - x0);
+      for (let iy = y0; iy < y1; iy++) {
+        for (let ix = x0; ix < x1; ix++) {
+          for (let ch = 0; ch < c; ch++)
+            out[(oy * ow + ox) * c + ch]! += x!.data[(iy * w + ix) * c + ch]! / count;
+        }
+      }
+    }
+  }
+  return tensor(ctx.expected, out);
+};
+
+const upsample: Kernel = ([x], p, ctx) => {
+  const [h, w, c] = x!.shape as [number, number, number];
+  const [oh, ow] = ctx.expected as [number, number, number];
+  const out = new Float32Array(oh * ow * c);
+  const bilinear = p.mode === "bilinear";
+  for (let oy = 0; oy < oh; oy++) {
+    // Pixel centres are aligned (align_corners=False), as in PyTorch and TensorFlow.
+    const fy = Math.min(h - 1, Math.max(0, ((oy + 0.5) * h) / oh - 0.5));
+    const y0 = bilinear ? Math.floor(fy) : Math.min(h - 1, Math.floor((oy * h) / oh));
+    const y1 = Math.min(h - 1, y0 + 1);
+    const wy = bilinear ? fy - y0 : 0;
+    for (let ox = 0; ox < ow; ox++) {
+      const fx = Math.min(w - 1, Math.max(0, ((ox + 0.5) * w) / ow - 0.5));
+      const x0 = bilinear ? Math.floor(fx) : Math.min(w - 1, Math.floor((ox * w) / ow));
+      const x1 = Math.min(w - 1, x0 + 1);
+      const wx = bilinear ? fx - x0 : 0;
+      const at = (oy * ow + ox) * c;
+      for (let ch = 0; ch < c; ch++) {
+        const top =
+          x!.data[(y0 * w + x0) * c + ch]! * (1 - wx) + x!.data[(y0 * w + x1) * c + ch]! * wx;
+        const bottom =
+          x!.data[(y1 * w + x0) * c + ch]! * (1 - wx) + x!.data[(y1 * w + x1) * c + ch]! * wx;
+        out[at + ch] = top * (1 - wy) + bottom * wy;
+      }
+    }
+  }
+  return tensor(ctx.expected, out);
+};
+
+const reduce =
+  (kind: "mean" | "max"): Kernel =>
+  ([x], p, ctx) => {
+    const shape = x!.shape;
+    const axes = new Set(
+      (p.axis as number[]).map((axis) => canonicalAxis(axis, ctx.nativeInputs[0]!)),
+    );
+    const out = new Float32Array(sizeOf(ctx.expected)).fill(kind === "max" ? -Infinity : 0);
+    const index = new Array<number>(shape.length).fill(0);
+    let reduced = 1;
+    for (const axis of axes) reduced *= shape[axis]!;
+    for (let flat = 0; flat < x!.data.length; flat++) {
+      // The output position is the input position with the reduced axes dropped.
+      let target = 0;
+      for (let axis = 0; axis < shape.length; axis++) {
+        if (!axes.has(axis)) target = target * shape[axis]! + index[axis]!;
+      }
+      const value = x!.data[flat]!;
+      if (kind === "max") {
+        if (value > out[target]!) out[target] = value;
+      } else out[target]! += value / reduced;
+      for (let axis = shape.length - 1; axis >= 0 && ++index[axis]! === shape[axis]; axis--)
+        index[axis] = 0;
+    }
+    return tensor(ctx.expected, out);
+  };
+
+/** Squeeze-and-excite, and CBAM's channel attention (which also uses the per-channel maximum). */
+const channelGate =
+  (cbam: boolean): Kernel =>
+  ([x], p, ctx) => {
+    const channels = x!.shape[x!.shape.length - 1]!;
+    const hidden = Math.max(
+      Math.floor(channels / Number(p.reduction ?? 16)),
+      Number(p.minHidden ?? 1),
+    );
+    const { avg, max } = channelSummaries(x!.data, channels);
+    // One small network, applied to both summaries with the same weights.
+    const mlp = (summary: Float32Array) => {
+      const inner = linear(summary, channels, hidden, ctx.seed ^ 0x61);
+      activate(inner, "relu", hidden);
+      return linear(inner, hidden, channels, ctx.seed ^ 0x62);
+    };
+    const scores = mlp(avg);
+    if (cbam) {
+      const fromMax = mlp(max);
+      for (let c = 0; c < channels; c++) scores[c]! += fromMax[c]!;
+    }
+    const out = new Float32Array(x!.data.length);
+    for (let i = 0; i < out.length; i++) out[i] = x!.data[i]! * sigmoid(scores[i % channels]!);
+    return tensor(x!.shape, out);
+  };
+
+const spatialAttention: Kernel = ([x], p, ctx) => {
+  const [h, w, c] = x!.shape as [number, number, number];
+  const k = Number(p.kernel ?? 7);
+  const pad = Math.floor(k / 2);
+  // Two maps: the average and the maximum over the channels at each position.
+  const summary = new Float32Array(h * w * 2);
+  for (let pos = 0; pos < h * w; pos++) {
+    let sum = 0;
+    let max = -Infinity;
+    for (let ch = 0; ch < c; ch++) {
+      const value = x!.data[pos * c + ch]!;
+      sum += value;
+      if (value > max) max = value;
+    }
+    summary[pos * 2] = sum / c;
+    summary[pos * 2 + 1] = max;
+  }
+  const weights = fillUniform(new Float32Array(k * k * 2), ctx.seed, glorotLimit(k * k * 2, k * k));
+  const out = new Float32Array(x!.data.length);
+  for (let y = 0; y < h; y++) {
+    for (let xx = 0; xx < w; xx++) {
+      let score = 0;
+      for (let ky = 0; ky < k; ky++) {
+        const iy = y - pad + ky;
+        if (iy < 0 || iy >= h) continue;
+        for (let kx = 0; kx < k; kx++) {
+          const ix = xx - pad + kx;
+          if (ix < 0 || ix >= w) continue;
+          const from = (iy * w + ix) * 2;
+          const at = (ky * k + kx) * 2;
+          score += summary[from]! * weights[at]! + summary[from + 1]! * weights[at + 1]!;
+        }
+      }
+      const gate = sigmoid(score);
+      const base = (y * w + xx) * c;
+      for (let ch = 0; ch < c; ch++) out[base + ch] = x!.data[base + ch]! * gate;
+    }
+  }
+  return tensor(x!.shape, out);
+};
+
+const GATES = { rnn: 1, lstm: 4, gru: 3 } as const;
+
+/** One direction of a recurrent layer. Returns the memory after every step. */
+function recur(
+  kind: keyof typeof GATES,
+  input: Float32Array,
+  steps: number,
+  size: number,
+  units: number,
+  seed: number,
+  reverse: boolean,
+): Float32Array {
+  const gates = GATES[kind];
+  const wx = fillUniform(
+    new Float32Array(gates * units * size),
+    seed ^ 0x71,
+    glorotLimit(size, units),
+  );
+  const wh = fillUniform(
+    new Float32Array(gates * units * units),
+    seed ^ 0x72,
+    glorotLimit(units, units),
+  );
+  const outputs = new Float32Array(steps * units);
+  const h = new Float32Array(units);
+  const cell = new Float32Array(units);
+  const fromInput = new Float32Array(gates * units);
+  const fromMemory = new Float32Array(gates * units);
+  for (let n = 0; n < steps; n++) {
+    const t = reverse ? steps - 1 - n : n;
+    for (let row = 0; row < gates * units; row++) {
+      let a = 0;
+      for (let i = 0; i < size; i++) a += wx[row * size + i]! * input[t * size + i]!;
+      let b = 0;
+      for (let i = 0; i < units; i++) b += wh[row * units + i]! * h[i]!;
+      fromInput[row] = a;
+      fromMemory[row] = b;
+    }
+    for (let u = 0; u < units; u++) {
+      if (kind === "rnn") {
+        h[u] = Math.tanh(fromInput[u]! + fromMemory[u]!);
+      } else if (kind === "lstm") {
+        const gate = (g: number) => fromInput[g * units + u]! + fromMemory[g * units + u]!;
+        // Gates in order: input, forget, candidate, output.
+        cell[u] = sigmoid(gate(1)) * cell[u]! + sigmoid(gate(0)) * Math.tanh(gate(2));
+        outputs[t * units + u] = sigmoid(gate(3)) * Math.tanh(cell[u]!);
+      } else {
+        const update = sigmoid(fromInput[u]! + fromMemory[u]!);
+        const reset = sigmoid(fromInput[units + u]! + fromMemory[units + u]!);
+        const candidate = Math.tanh(fromInput[2 * units + u]! + reset * fromMemory[2 * units + u]!);
+        outputs[t * units + u] = (1 - update) * candidate + update * h[u]!;
+      }
+    }
+    // The new memory is read only after every unit has used the old one.
+    if (kind === "rnn") outputs.set(h, t * units);
+    else h.set(outputs.subarray(t * units, (t + 1) * units));
+  }
+  return outputs;
+}
+
+const recurrent =
+  (kind: keyof typeof GATES): Kernel =>
+  ([x], p, ctx) => {
+    const [steps, size] = x!.shape as [number, number];
+    const units = Number(p.units);
+    const directions = p.bidirectional ? 2 : 1;
+    const forward = recur(kind, x!.data, steps, size, units, ctx.seed, false);
+    const backward = p.bidirectional
+      ? recur(kind, x!.data, steps, size, units, ctx.seed ^ 0x7f, true)
+      : null;
+    if (p.returnSequences) {
+      const out = new Float32Array(steps * units * directions);
+      for (let t = 0; t < steps; t++) {
+        out.set(forward.subarray(t * units, (t + 1) * units), t * units * directions);
+        if (backward)
+          out.set(backward.subarray(t * units, (t + 1) * units), t * units * directions + units);
+      }
+      return tensor(ctx.expected, out);
+    }
+    // The final memory: the last step going forward, the first step going backward.
+    const out = new Float32Array(units * directions);
+    out.set(forward.subarray((steps - 1) * units, steps * units), 0);
+    if (backward) out.set(backward.subarray(0, units), units);
+    return tensor(ctx.expected, out);
+  };
+
+const anchorGenerator: Kernel = ([x], p, ctx) => {
+  const [h, w] = x!.shape as [number, number, number];
+  const perLocation = Number(p.perLocation ?? 9);
+  const out = new Float32Array(sizeOf(ctx.expected));
+  // Three aspect ratios, and as many scales as needed. Boxes are fractions of the image: x1, y1, x2, y2.
+  const ratios = [0.5, 1, 2];
+  let at = 0;
+  for (let y = 0; y < h; y++) {
+    for (let xx = 0; xx < w; xx++) {
+      const cx = (xx + 0.5) / w;
+      const cy = (y + 0.5) / h;
+      for (let a = 0; a < perLocation; a++) {
+        const ratio = ratios[a % ratios.length]!;
+        const scale = (4 / Math.max(h, w)) * 2 ** (Math.floor(a / ratios.length) / 3);
+        const bw = (scale * Math.sqrt(ratio)) / 2;
+        const bh = scale / Math.sqrt(ratio) / 2;
+        out.set([cx - bw, cy - bh, cx + bw, cy + bh], at);
+        at += 4;
+      }
+    }
+  }
+  return tensor(ctx.expected, out);
+};
+
+export const EXTRA_KERNELS: Partial<Record<OpKind, Kernel>> = {
+  groupnorm,
+  tanh: elementwise("tanh"),
+  silu: elementwise("silu"),
+  leaky_relu: elementwise("leaky_relu"),
+  hardswish: elementwise("hardswish"),
+  global_max_pool: globalMaxPool,
+  adaptive_avg_pool2d: adaptiveAvgPool2d,
+  upsample,
+  reduce_mean: reduce("mean"),
+  reduce_max: reduce("max"),
+  squeeze_excite: channelGate(false),
+  channel_attention: channelGate(true),
+  spatial_attention: spatialAttention,
+  rnn: recurrent("rnn"),
+  lstm: recurrent("lstm"),
+  gru: recurrent("gru"),
+  anchor_generator: anchorGenerator,
+};

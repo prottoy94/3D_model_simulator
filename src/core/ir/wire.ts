@@ -172,3 +172,10 @@ export type WireIR = z.infer<typeof wireIRSchema>;
  * so it runs once per item along axis 1 (per RoI in Fast R-CNN).
  */
 export const TIME_DISTRIBUTED_KEY = "timeDistributed";
+
+/**
+ * Param key any node may carry: this layer reuses the weights of the node
+ * named here (a head applied to several feature maps). Its parameters are
+ * counted once, on that node.
+ */
+export const SHARED_WITH_KEY = "sharedWith";

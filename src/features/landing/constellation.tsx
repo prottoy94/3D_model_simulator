@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { readToken } from "@/lib/tokens";
+import { useSkin } from "@/stores/prefs-store";
 
 type Point = { x: number; y: number; vx: number; vy: number; r: number };
 
@@ -14,6 +15,7 @@ const LINK_DISTANCE = 150;
  */
 export function Constellation() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const skin = useSkin();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -104,7 +106,7 @@ export function Constellation() {
       observer.disconnect();
       window.removeEventListener("pointermove", onPointerMove);
     };
-  }, []);
+  }, [skin]);
 
   return <canvas ref={canvasRef} aria-hidden className="absolute inset-0 h-full w-full" />;
 }

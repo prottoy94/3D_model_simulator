@@ -7,6 +7,7 @@ import { useMemo, useState, type RefObject } from "react";
 import { MOUSE, TOUCH } from "three";
 import type { ModelLayout } from "@/core/layout";
 import { readToken } from "@/lib/tokens";
+import { usePrefsStore } from "@/stores/prefs-store";
 import type { LabelRegistry } from "./labels";
 import { ModelScene } from "./model-scene";
 
@@ -28,6 +29,8 @@ export default function Scene({
 }) {
   // Drop to 1× pixel density when the frame rate sags (large models, weak GPUs).
   const [maxDpr, setMaxDpr] = useState(2);
+  // Bloom adds light, which washes out a pale stage: it is for the dark theme only.
+  const light = usePrefsStore((state) => state.theme === "light");
   const colors = useMemo(
     () => ({
       deep: readToken("--bg-deep"),
@@ -42,7 +45,8 @@ export default function Scene({
     <Canvas
       dpr={[1, maxDpr]}
       camera={{ position: [9, 6, 12], fov: 42, near: 0.1, far: 400 }}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      // The drawing buffer is kept so the view can be saved as a picture at any time.
+      gl={{ antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true }}
     >
       <color attach="background" args={[colors.deep]} />
       <fogExp2 attach="fog" args={[colors.deep, 0.011]} />
@@ -83,9 +87,11 @@ export default function Scene({
         panSpeed={1.1}
       />
 
-      <EffectComposer>
-        <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.4} mipmapBlur />
-      </EffectComposer>
+      {light ? null : (
+        <EffectComposer>
+          <Bloom intensity={0.9} luminanceThreshold={0.25} luminanceSmoothing={0.4} mipmapBlur />
+        </EffectComposer>
+      )}
     </Canvas>
   );
 }

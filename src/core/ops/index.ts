@@ -1,5 +1,6 @@
 import { basicOps } from "./basic";
 import { convOps } from "./conv";
+import { extraOps } from "./extra";
 import type { OpKind } from "./kinds";
 import { linearOps } from "./linear";
 import { poolOps } from "./pool";
@@ -9,7 +10,7 @@ import type { AnyOpSpec } from "./types";
 export * from "./kinds";
 export * from "./types";
 
-const entries = [...basicOps, ...convOps, ...poolOps, ...linearOps, ...structureOps];
+const entries = [...basicOps, ...convOps, ...poolOps, ...linearOps, ...structureOps, ...extraOps];
 
 /** The op catalog: the single source of truth for what each operation is. */
 export const OP_CATALOG: Partial<Record<OpKind, AnyOpSpec>> = Object.fromEntries(
@@ -57,5 +58,7 @@ export function layerNames(framework: "keras" | "pytorch"): Array<[string, OpKin
 /** Maps a fused or standalone activation name to its op, when it has one. */
 export function opForActivation(name: string): OpKind | undefined {
   const key = name.toLowerCase();
-  return (["relu", "gelu", "sigmoid", "softmax"] as const).find((op) => op === key);
+  return (
+    ["relu", "gelu", "sigmoid", "softmax", "tanh", "silu", "leaky_relu", "hardswish"] as const
+  ).find((op) => op === key);
 }

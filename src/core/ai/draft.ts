@@ -10,7 +10,7 @@ import { z } from "zod";
 import { ref, WireBuilder } from "../ir/builder";
 import type { CodeRef, ParamValue, WireGroup, WireIR } from "../ir/wire";
 import { getOp, OP_KINDS, opForLayerName, type OpKind } from "../ops";
-import { resolveZoo } from "../zoo";
+import { resolveZoo, resolveZooStage } from "../zoo";
 
 /** [cell, firstLine, lastLine], lines 1-based within the cell. */
 const linesSchema = z.tuple([z.number().int(), z.number().int(), z.number().int()]).nullish();
@@ -27,6 +27,8 @@ const draftNodeSchema = z.object({
   className: z.string().nullish(),
   frozen: z.boolean().nullish(),
   timeDistributed: z.boolean().nullish(),
+  /** Id of the node whose weights this node reuses. */
+  sharedWith: z.string().nullish(),
   outputShape: z.array(z.union([z.number(), z.string(), z.null()])).nullish(),
   explanation: z.string().nullish(),
 });
@@ -93,6 +95,8 @@ export const draftPatchSchema = z.object({
         className: z.string().nullish(),
         frozen: z.boolean().nullish(),
         timeDistributed: z.boolean().nullish(),
+        /** Id of the node whose weights this node reuses. */
+        sharedWith: z.string().nullish(),
         outputShape: z.array(z.union([z.number(), z.string(), z.null()])).nullish(),
         explanation: z.string().nullish(),
       }),
@@ -370,7 +374,21 @@ export function draftToWire(draft: Draft): WireIR {
           Array.isArray(params.inputSize) && params.inputSize.length >= 2
             ? (params.inputSize as number[])
             : [224, 224];
-        const facts = name ? resolveZoo(name, [size[0]!, size[1]!], engine) : null;
+        // "stage": the feature map after one stage of the backbone, read by a multi-scale head.
+        const stage = typeof params.stage === "number" ? params.stage : null;
+        const tap =
+          name && stage !== null
+            ? resolveZooStage(name, stage, [size[0]!, size[1]!], engine)
+            : null;
+        delete params.stage;
+        if (tap) {
+          params.outputShape = tap.outputShape;
+          params.paramCount = 0;
+          params.description = `The feature map after stage ${stage} of ${tap.entry.title}. Its weights are counted on the backbone.`;
+          customOpName = `${tap.entry.key} · stage ${stage}`;
+        }
+        const facts =
+          name && stage === null ? resolveZoo(name, [size[0]!, size[1]!], engine) : null;
         delete params.zoo;
         delete params.name;
         delete params.inputSize;
@@ -387,6 +405,8 @@ export function draftToWire(draft: Draft): WireIR {
         params.outputShape = claimed.slice(1).map((dim) => (typeof dim === "number" ? dim : -1));
       }
       if (node.timeDistributed) params.timeDistributed = true;
+      if (node.sharedWith && nodeIds.has(node.sharedWith))
+        params.sharedWith = scope(node.sharedWith);
 
       const spec = getOp(op);
       const hasWeights =

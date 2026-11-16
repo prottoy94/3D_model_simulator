@@ -171,10 +171,20 @@ export function propagateShapes(ir: NormalizedIR): PropagationResult {
       const result = compute(node, spec, node.inShapes, ctx);
       node.outShape = result.out;
       node.flops = result.flops;
-      node.paramCount =
-        node.trainable === "no"
-          ? { trainable: 0, nonTrainable: result.count.trainable + result.count.nonTrainable }
-          : result.count;
+      if (node.sharedWith && nodeById.has(node.sharedWith)) {
+        // The same weights applied again: they are counted on the node they belong to.
+        node.paramCount = { trainable: 0, nonTrainable: 0 };
+        node.issues.push({
+          code: "shared-weights",
+          message: `Uses the same weights as "${nodeById.get(node.sharedWith)!.label}", so its parameters are counted there.`,
+          severity: "info",
+        });
+      } else {
+        node.paramCount =
+          node.trainable === "no"
+            ? { trainable: 0, nonTrainable: result.count.trainable + result.count.nonTrainable }
+            : result.count;
+      }
       if (node.trainable === "partial") {
         node.issues.push({
           code: "partly-frozen",

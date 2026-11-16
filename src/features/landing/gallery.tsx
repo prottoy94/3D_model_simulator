@@ -34,6 +34,13 @@ const gallery: ReadonlyArray<GalleryModel> = [
     example: "mini-vit",
     note: "4 blocks · 404 K params",
   },
+  {
+    name: "FireNet",
+    family: "Detection · attention",
+    color: "var(--op-det)",
+    example: "firenet",
+    note: "From your notebook · 32.18 M params",
+  },
   { name: "ResNet50", family: "CNN · residual", color: "var(--op-merge)" },
   { name: "EfficientNetB0", family: "CNN · MBConv", color: "var(--op-pool)" },
   { name: "LSTM", family: "Recurrent", color: "var(--op-recur)" },

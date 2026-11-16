@@ -12,10 +12,12 @@ import { NotebookMap } from "@/features/notebook-map/notebook-map";
 import { Viewport } from "@/features/viewport-3d";
 import { cn } from "@/lib/cn";
 import { useModelStore } from "@/stores/model-store";
+import { usePrefsStore } from "@/stores/prefs-store";
 import { useProjectStore } from "@/stores/project-store";
 import { useUiStore, type InspectorTab } from "@/stores/ui-store";
 import { OpenNotebookButton } from "./open-notebook-button";
 import { TimelineBar } from "./timeline-bar";
+import { Tour } from "./tour";
 
 const modelTabs: ReadonlyArray<{ value: InspectorTab; label: string }> = [
   { value: "layer", label: "Layer" },
@@ -48,6 +50,13 @@ export function ScopeShell() {
     if (useModelStore.getState().source === "forge") useProjectStore.getState().showCurrent();
     void restoreLatest();
   }, [restoreLatest]);
+
+  // The first time a model is on screen, the tour introduces the workspace.
+  const prefsLoaded = usePrefsStore((state) => state.loaded);
+  const tourSeen = usePrefsStore((state) => state.tourSeen);
+  useEffect(() => {
+    if (prefsLoaded && !tourSeen && hasModel) usePrefsStore.getState().startTour();
+  }, [prefsLoaded, tourSeen, hasModel]);
 
   return (
     <main
@@ -90,7 +99,7 @@ export function ScopeShell() {
                 <EmptyHint>Cells appear here, tagged by role. Model cells glow.</EmptyHint>
               )}
             </GlassPanel>
-            <GlassPanel className="flex-1">
+            <GlassPanel className="flex-1" data-tour="code">
               <PanelHeader title={isGallery ? "Code · generated" : "Code"} actions={<LensChip />} />
               {hasProject || isGallery ? (
                 <CodeEditor />
@@ -110,7 +119,7 @@ export function ScopeShell() {
         <RailHandle />
 
         <Panel id="right" defaultSize="21%" minSize="14%" maxSize="36%" collapsible>
-          <GlassPanel className="h-full">
+          <GlassPanel className="h-full" data-tour="inspector">
             <PanelHeader
               title="Inspector"
               actions={
@@ -152,7 +161,10 @@ export function ScopeShell() {
         </Panel>
       </Group>
 
-      <TimelineBar />
+      <div data-tour="timeline">
+        <TimelineBar />
+      </div>
+      <Tour />
 
       <div
         aria-hidden={!dragging}

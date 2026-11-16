@@ -145,6 +145,11 @@ type WireIR = {
 - **TimeDistributed:** any node may carry the param `timeDistributed: true`. The engine then
   applies the op per item along axis 1 (`(B, R, 7, 7, 128)` → Flatten → `(B, R, 6272)`). There is
   no separate `time_distributed` op.
+- **Shared weights:** any node may carry the param `sharedWith: "<node id>"`. It is another
+  application of that node's layer: it computes with the same weights and its parameters are
+  counted once, on the node it names (a detection head run on three feature maps).
+- **Backbone stage taps:** a `backbone` node with `stage: k` is the feature map after stage k of
+  the pretrained network named by `zoo`. It has no parameters of its own.
 - **Run-time sizes:** an `input` shape entry of `-1` is a symbolic dim named by `dynamicDim`
   (e.g. `"R"` for RoIs).
 - **Symbols in params:** a string param value equal to a symbol name is replaced by that symbol's

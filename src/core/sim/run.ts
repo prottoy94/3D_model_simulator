@@ -103,7 +103,8 @@ export function* simulate(ir: RuntimeIR, modelId: string, input: SimInput): Gene
       .map((edge) => tensors.get(edge.from))
       .filter((item): item is SimTensor => item !== undefined);
     const extras: KernelExtras = {};
-    const seed = seedFor(id);
+    // A layer that shares weights computes with the weights of the layer it shares them with.
+    const seed = seedFor(node.sharedWith ?? id);
     let note: string | null = null;
     let tensor: SimTensor | null = null;
 

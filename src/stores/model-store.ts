@@ -3,7 +3,7 @@ import { exportCode } from "@/core/codegen/export";
 import { generateListing, type CodeListing } from "@/core/codegen/listing";
 import { buildRuntimeIR, type RuntimeIR, type WireIR } from "@/core/ir";
 import type { ModelSummary } from "@/core/notebook";
-import { EXAMPLE_IRS } from "@/core/ir/examples";
+import { GALLERY } from "@/core/gallery";
 import { defaultCollapsed } from "@/core/layout";
 import type { LensFocus } from "@/core/lens";
 import { useUiStore } from "./ui-store";
@@ -147,7 +147,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
   },
 
   loadExample: (name) => {
-    const make = EXAMPLE_IRS[name];
+    const make = GALLERY[name];
     if (!make) return false;
     const built = buildRuntimeIR(make(), { provenance: "user" });
     if (!built.ok) return false;

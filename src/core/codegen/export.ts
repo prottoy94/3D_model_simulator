@@ -235,6 +235,30 @@ function torchNode(
     case "dropout":
     case "embedding":
       return { module: spec!.codegen.pytorch(p, io(node)), expr: `${self}(${x})` };
+    case "groupnorm":
+    case "upsample":
+      return { module: spec!.codegen.pytorch(p, io(node)), expr: `${self}(${x})` };
+    case "tanh":
+      return { expr: `torch.tanh(${x})` };
+    case "silu":
+      return { expr: `F.silu(${x})` };
+    case "leaky_relu":
+      return { expr: `F.leaky_relu(${x})` };
+    case "hardswish":
+      return { expr: `F.hardswish(${x})` };
+    case "global_max_pool": {
+      const input = node.inShapes[0];
+      const dims = input && isImage(input) ? "(2, 3)" : input?.layout === "NCL" ? "2" : "1";
+      return { expr: `${x}.amax(dim=${dims}${p.keepDims ? ", keepdim=True" : ""})` };
+    }
+    case "rnn":
+    case "lstm":
+    case "gru":
+      // The layer returns (outputs, state); the last time step is the summary of the sequence.
+      return {
+        module: spec!.codegen.pytorch(p, io(node)),
+        expr: p.returnSequences ? `${self}(${x})[0]` : `${self}(${x})[0][:, -1]`,
+      };
     default:
       return null;
   }

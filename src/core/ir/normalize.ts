@@ -7,6 +7,7 @@ import { getOp } from "../ops";
 import type { Framework } from "../shapes/tensor";
 import type { Issue, RuntimeGroup, RuntimeNode } from "./runtime";
 import {
+  SHARED_WITH_KEY,
   TIME_DISTRIBUTED_KEY,
   wireIRSchema,
   type ParamEntry,
@@ -58,6 +59,7 @@ export function normalizeWire(
     const {
       params,
       wrapper,
+      sharedWith,
       issues: paramIssues,
       failed,
       symbolsUsed,
@@ -66,6 +68,7 @@ export function normalizeWire(
       ...node,
       params,
       wrapper,
+      sharedWith,
       inShapes: [],
       outShape: null,
       paramCount: { trainable: 0, nonTrainable: 0 },
@@ -119,6 +122,7 @@ function typeParams(
 ): {
   params: Record<string, unknown>;
   wrapper: RuntimeNode["wrapper"];
+  sharedWith: string | null;
   symbolsUsed: string[];
   issues: Issue[];
   failed: boolean;
@@ -134,6 +138,9 @@ function typeParams(
   }
   const wrapper = given[TIME_DISTRIBUTED_KEY] === true ? "time_distributed" : null;
   delete given[TIME_DISTRIBUTED_KEY];
+  const sharedWith =
+    typeof given[SHARED_WITH_KEY] === "string" ? (given[SHARED_WITH_KEY] as string) : null;
+  delete given[SHARED_WITH_KEY];
 
   const spec = getOp(op);
   if (!spec) {
@@ -142,7 +149,7 @@ function typeParams(
       message: `"${op}" has no catalog entry yet, so its shape and parameter count are not computed.`,
       severity: "warn",
     });
-    return { params: given, wrapper, issues, failed: false, symbolsUsed };
+    return { params: given, wrapper, sharedWith, issues, failed: false, symbolsUsed };
   }
 
   const result = spec.params.safeParse({ ...spec.defaults[framework], ...given });
@@ -154,7 +161,7 @@ function typeParams(
         severity: "error",
       });
     }
-    return { params: given, wrapper, issues, failed: true, symbolsUsed };
+    return { params: given, wrapper, sharedWith, issues, failed: true, symbolsUsed };
   }
   const params = result.data as Record<string, unknown>;
   for (const key of Object.keys(given)) {
@@ -166,7 +173,7 @@ function typeParams(
       });
     }
   }
-  return { params, wrapper, issues, failed: false, symbolsUsed };
+  return { params, wrapper, sharedWith, issues, failed: false, symbolsUsed };
 }
 
 type Graph = {

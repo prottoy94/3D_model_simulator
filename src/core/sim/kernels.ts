@@ -10,6 +10,7 @@
 import type { RuntimeNode } from "../ir/runtime";
 import type { OpKind } from "../ops/kinds";
 import type { Framework, TensorShape } from "../shapes/tensor";
+import { EXTRA_KERNELS } from "./kernels-extra";
 import {
   canonicalAxis,
   fillUniform,
@@ -38,13 +39,13 @@ export type KernelContext = {
   extras: KernelExtras;
 };
 
-type Kernel = (
+export type Kernel = (
   inputs: SimTensor[],
   params: Record<string, unknown>,
   ctx: KernelContext,
 ) => SimTensor;
 
-const tensor = (shape: number[], data: Float32Array): SimTensor => ({
+export const tensor = (shape: number[], data: Float32Array): SimTensor => ({
   shape,
   data,
   illustrative: false,
@@ -92,6 +93,12 @@ export function activate(data: Float32Array, name: string, lastAxis: number): vo
     case "swish":
     case "silu":
       for (let i = 0; i < data.length; i++) data[i] = data[i]! / (1 + Math.exp(-data[i]!));
+      return;
+    case "hardswish":
+      for (let i = 0; i < data.length; i++) {
+        const x = data[i]!;
+        data[i] = (x * Math.min(6, Math.max(0, x + 3))) / 6;
+      }
       return;
     case "leaky_relu":
       for (let i = 0; i < data.length; i++) if (data[i]! < 0) data[i]! *= 0.2;
@@ -336,7 +343,7 @@ const layernorm: Kernel = ([x], p) => {
  * output unit's row is generated from the seed, used for every position and
  * dropped, so even AlexNet's 26-million-weight layer needs no extra memory.
  */
-function linear(x: Float32Array, inSize: number, units: number, seed: number): Float32Array {
+export function linear(x: Float32Array, inSize: number, units: number, seed: number): Float32Array {
   const positions = x.length / inSize;
   const out = new Float32Array(positions * units);
   const row = new Float32Array(inSize);
@@ -549,6 +556,7 @@ const roiPool: Kernel = ([features, boxes], _p, ctx) => {
 
 /** Ops the simulator can compute. Anything else is drawn with illustrative values. */
 export const KERNELS: Partial<Record<OpKind, Kernel>> = {
+  ...EXTRA_KERNELS,
   conv2d,
   depthwise_conv2d: depthwiseConv2d,
   maxpool2d: pool("max"),

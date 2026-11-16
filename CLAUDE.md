@@ -6,7 +6,16 @@
 
 ## Status
 
-- **Phases 0–7 are built (2026-11-15). Next: Phase 8 (breadth)** in [docs/08-ROADMAP.md](docs/08-ROADMAP.md).
+- **Phases 0–7 are built; Phases 8 and 9 are partly built (2026-11-16). Next: the open boxes
+  of Phase 8 (classical ML, detection post-processing, NLP decoder) and Phase 9 (real weights,
+  training replay, MP4, performance and accessibility passes)** in
+  [docs/08-ROADMAP.md](docs/08-ROADMAP.md). Phase 9 so far: receptive fields
+  (`src/core/receptive`, shown in the Layer inspector), Compare (`src/core/compare`,
+  `src/features/compare`), the Display menu with a light theme and a colorblind-safe palette
+  (`usePrefsStore`; token overrides in `tokens.css`), "Save picture" (PNG of the 3D view) and a
+  guided tour (`src/features/shell/tour.tsx`, targets are `data-tour` attributes). Phase 8 so far: 17 more ops in `src/core/ops/extra.ts`
+  with kernels in `src/core/sim/kernels-extra.ts`, shared weights (`sharedWith`), backbone stage
+  taps, and FireNet as a gallery model (`src/core/gallery.ts`, the gallery's model list).
   Phase 7 added Forge: `src/core/forge` (pure edits on a Draft, templates, fix suggestions),
   `src/core/codegen/export.ts` (runnable Keras and PyTorch), `useForgeStore` (document, undo,
   local save) and `src/features/forge`. Forge shows its model through `useModelStore` with
@@ -31,7 +40,7 @@
   stripped in the browser, every cell gets a role, constants are resolved, saved `model.summary()`
   outputs are parsed, and Scope shows the Notebook Map, the code (Monaco) and a notebook inspector.
   No AI and no 3D model yet. Playwright is deferred to Phase 3.
-- Phases 1 and 2 are commit `854619b`. Phases 3 to 7 are not committed yet.
+- Phases 1 and 2 are commit `854619b`. Phases 3 to 8 are not committed yet.
 - PyTorch and Keras are not installed here: exported code can only be syntax-checked
   (`python -m py_compile .cache/forge-export/*.py` after `pnpm test`).
 - In the browser, `window.monaco.editor.getEditors()[0]` gives the code editor (use it to set a
@@ -41,6 +50,9 @@
 - **Never send the user's notebooks to an AI provider without asking** (free tiers may train on
   inputs). Test the AI flow with toy code written for the test.
 - Bash heredocs break on long or quote-heavy content here: write a script file and run it.
+- Colors: WebGL materials, Monaco and 2D canvases read tokens once with `readToken`. Anything
+  that does so must take `useSkin()` as a `key` or effect dependency, or it keeps the old theme.
+  Never hard-code a color outside `tokens.css`.
 - Never use drei `Html` for labels (React 19 logs unmount errors): use the DOM overlay in
   `src/features/viewport-3d/labels.tsx`. Monaco also creates `<canvas>` elements, so select the
   three.js canvas by `data-engine`.
@@ -167,6 +179,8 @@ src/core/zoo/            pretrained backbone facts (templates later) + resolver
 src/core/layout/         visible graph (collapse), 3D river layout, 2D card layout
 src/core/sim/            compute kernels, runner, tensor views, sim plan (pure TS, ADR-017)
 src/core/lens/           code selection → focus (layers, block copy, group, or constant)
+src/core/receptive/      theoretical receptive field per layer (image models)
+src/core/compare/        per-model stats for the Compare dialog
 src/core/codegen/        IR → code listing (gallery) and runnable Keras / PyTorch scripts (Forge)
 src/core/forge/          Forge edits on a Draft, palette, templates, fix suggestions
 src/core/ai/             Draft format, prompts, context slicer, problem reports (pure)

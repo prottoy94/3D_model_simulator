@@ -43,6 +43,24 @@ export const OP_REFERENCE: Record<string, string> = {
   roi_pool: "pooled [h,w]. inputs = [feature map, boxes (B, R, 4)]",
   backbone:
     "zoo (the pretrained model's name), inputSize [h,w]. Use ONE backbone node for a whole pretrained network; never list its inner layers",
+  groupnorm: "groups",
+  tanh: "(none)",
+  silu: "(none) also called swish",
+  leaky_relu: "(none)",
+  hardswish: "(none)",
+  global_max_pool: "keepDims. Also for amax over the spatial axes",
+  adaptive_avg_pool2d: "output [h, w]",
+  upsample: 'scale [h, w] or size [h, w], mode ("nearest" | "bilinear"). Also for F.interpolate',
+  reduce_mean: "axis (as in the code, batch is 0), keepDims",
+  reduce_max: "axis, keepDims",
+  squeeze_excite: "reduction. Squeeze-and-excite as ONE node",
+  channel_attention:
+    "reduction, minHidden, bias. CBAM channel attention as ONE node (shared MLP on avg and max pooled features, then scaling)",
+  spatial_attention: "kernel, bias. CBAM spatial attention as ONE node",
+  rnn: "units, returnSequences, bidirectional",
+  lstm: "units, returnSequences, bidirectional",
+  gru: "units, returnSequences, bidirectional",
+  anchor_generator: "perLocation (boxes per position), stride. inputs = [feature map]",
   custom:
     "outputShape (without batch), paramCount, description. Only for a layer that fits no op above; also set className",
 };
@@ -112,6 +130,8 @@ RULES
 7. A helper function that builds layers is expanded at each call site; give each resulting node the lines of the layer call inside the helper.
 8. Use the constants and class counts provided. If a value cannot be known, add a symbol with source "assumed" and say so in warnings.
 9. Ids are short, unique within a model, and use only letters, digits and underscores.
+10. A layer applied to several inputs with the SAME weights (a head run on three feature maps): write one node per application, and on every application after the first set "sharedWith": "<id of the first one>".
+11. A model that reads intermediate feature maps of a pretrained network: add extra "backbone" nodes with params {"zoo": "<name>", "inputSize": [h, w], "stage": <1-based stage number>} and the main backbone node as input.
 
 EXAMPLE
 ${EXAMPLE}`;
