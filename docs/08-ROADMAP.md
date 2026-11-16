@@ -252,16 +252,25 @@ by dragging in the 2D view and dragging from the palette were not tried in the b
 - [x] Backbone stage taps (`stage` on a `backbone` node), with stage facts for ConvNeXt-Tiny.
 - [x] **FireNet (N6) is a gallery model**, written by hand from the notebook: 32,183,742
       parameters and 9,261 anchors, both matching what the notebook prints.
-- [ ] Detection still to do: `roi_align`, `box_decode`, `nms`, and pipeline stages as views.
+- [x] Detection after the heads: `roi_align`, `box_decode`, `nms` (shape, explanation, codegen
+      and compute), and a "Tiny detector" gallery model that uses all of them.
+- [x] `conv1d` and `maxpool1d` for sequences (Keras and PyTorch axis orders).
+- [ ] Detection still to do: pipeline stages as views (a boxes-on-the-image visualizer).
 - [ ] Zoo still to do: layer-by-layer templates, YOLOv8n, stage facts for the other backbones.
-- [ ] NLP still to do: Transformer decoder with masks, a toy tokenizer, `conv1d`.
+- [ ] NLP still to do: Transformer decoder with masks, a toy tokenizer.
 - [ ] Classical ML (`estimator` and its visualizers): not started.
 
-**Status (2026-11-16):** the part that matters for the reference notebooks is done. 210 tests
-pass. The new parameter formulas were checked against known values (Keras LSTM(64) on 32 inputs
-= 24,832; PyTorch = 25,088; GRU = 18,816) and against FireNet's printed total. In the browser the
-FireNet gallery model opened and drew. **Not done:** see the open boxes above. The FireNet model
-was written by hand, not produced by the AI step, so it says nothing about AI accuracy.
+**Status (2026-11-16):** the part that matters for the reference notebooks is done, and the
+detection steps after the heads and the 1D layers were added in a second pass. The catalog has 50
+ops and 230 tests pass. Checked: recurrent formulas against known Keras and PyTorch values,
+FireNet's printed total, `Conv1D(64, 3)` on 32 channels = 6,208 parameters, intersection over
+union and greedy suppression on hand-made boxes, and a full detector graph (decoded boxes stay in
+the image, kept boxes overlap by at most the limit). In the browser the FireNet and Tiny detector
+gallery models opened, drew and (Tiny detector) ran with every layer really computed.
+**Not done:** see the open boxes above. The new ops are not in the Forge palette, because the
+PyTorch export has no multi-input handling for them yet. NMS returns the kept boxes only (not
+their scores or classes). FireNet was written by hand, not produced by the AI step, so it says
+nothing about AI accuracy.
 
 ## Phase 9: Polish and P2 features
 - [x] Receptive-field explorer: `src/core/receptive` computes the theoretical field of every

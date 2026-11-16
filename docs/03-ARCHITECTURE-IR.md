@@ -150,6 +150,12 @@ type WireIR = {
   counted once, on the node it names (a detection head run on three feature maps).
 - **Backbone stage taps:** a `backbone` node with `stage: k` is the feature map after stage k of
   the pretrained network named by `zoo`. It has no parameters of its own.
+- **Detection inputs, by port:** `box_decode` takes the predicted offsets, then the anchors;
+  `nms` takes the boxes, then the scores; `roi_pool` and `roi_align` take the feature map, then
+  the boxes. Boxes are `(B, N, 4)` as x1, y1, x2, y2. The number of boxes `nms` keeps is the
+  run-time size `K`.
+- **1D layers:** `conv1d` and `maxpool1d` read `(B, length, channels)` in Keras and
+  `(B, channels, length)` in PyTorch, whatever produced the tensor, as the frameworks do.
 - **Run-time sizes:** an `input` shape entry of `-1` is a symbolic dim named by `dynamicDim`
   (e.g. `"R"` for RoIs).
 - **Symbols in params:** a string param value equal to a symbol name is replaced by that symbol's

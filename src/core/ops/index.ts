@@ -1,6 +1,7 @@
 import { basicOps } from "./basic";
 import { convOps } from "./conv";
 import { extraOps } from "./extra";
+import { sequenceDetectOps } from "./sequence-detect";
 import type { OpKind } from "./kinds";
 import { linearOps } from "./linear";
 import { poolOps } from "./pool";
@@ -10,7 +11,15 @@ import type { AnyOpSpec } from "./types";
 export * from "./kinds";
 export * from "./types";
 
-const entries = [...basicOps, ...convOps, ...poolOps, ...linearOps, ...structureOps, ...extraOps];
+const entries = [
+  ...basicOps,
+  ...convOps,
+  ...poolOps,
+  ...linearOps,
+  ...structureOps,
+  ...extraOps,
+  ...sequenceDetectOps,
+];
 
 /** The op catalog: the single source of truth for what each operation is. */
 export const OP_CATALOG: Partial<Record<OpKind, AnyOpSpec>> = Object.fromEntries(

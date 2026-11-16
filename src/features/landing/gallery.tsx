@@ -41,6 +41,13 @@ const gallery: ReadonlyArray<GalleryModel> = [
     example: "firenet",
     note: "From your notebook · 32.18 M params",
   },
+  {
+    name: "Tiny detector",
+    family: "Detection",
+    color: "var(--op-det)",
+    example: "tiny-detector",
+    note: "Anchors, decoding, NMS, RoI align",
+  },
   { name: "ResNet50", family: "CNN · residual", color: "var(--op-merge)" },
   { name: "EfficientNetB0", family: "CNN · MBConv", color: "var(--op-pool)" },
   { name: "LSTM", family: "Recurrent", color: "var(--op-recur)" },
@@ -48,7 +55,7 @@ const gallery: ReadonlyArray<GalleryModel> = [
   { name: "U-Net", family: "Segmentation", color: "var(--op-norm)" },
 ];
 
-/** Prebuilt architectures. The first three open in Scope; the rest are planned. */
+/** Prebuilt architectures. The ones with an example open in Scope; the rest are planned. */
 export function Gallery() {
   const router = useRouter();
   const open = (example: string) => {

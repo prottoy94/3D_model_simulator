@@ -14,8 +14,9 @@
   `src/features/compare`), the Display menu with a light theme and a colorblind-safe palette
   (`usePrefsStore`; token overrides in `tokens.css`), "Save picture" (PNG of the 3D view) and a
   guided tour (`src/features/shell/tour.tsx`, targets are `data-tour` attributes). Phase 8 so far: 17 more ops in `src/core/ops/extra.ts`
-  with kernels in `src/core/sim/kernels-extra.ts`, shared weights (`sharedWith`), backbone stage
-  taps, and FireNet as a gallery model (`src/core/gallery.ts`, the gallery's model list).
+  and 5 in `src/core/ops/sequence-detect.ts` (conv1d, maxpool1d, roi_align, box_decode, nms; 50 ops
+  in all) with kernels in `src/core/sim/kernels-extra.ts`, shared weights (`sharedWith`), backbone stage
+  taps, and FireNet and a Tiny detector as gallery models (`src/core/gallery.ts`, the gallery's model list).
   Phase 7 added Forge: `src/core/forge` (pure edits on a Draft, templates, fix suggestions),
   `src/core/codegen/export.ts` (runnable Keras and PyTorch), `useForgeStore` (document, undo,
   local save) and `src/features/forge`. Forge shows its model through `useModelStore` with
@@ -40,7 +41,11 @@
   stripped in the browser, every cell gets a role, constants are resolved, saved `model.summary()`
   outputs are parsed, and Scope shows the Notebook Map, the code (Monaco) and a notebook inspector.
   No AI and no 3D model yet. Playwright is deferred to Phase 3.
-- Phases 1 and 2 are commit `854619b`. Phases 3 to 8 are not committed yet.
+- Everything up to Phase 9's first pass is committed (`8fdce1f`). The second Phase 8 pass
+  (sequence and detection ops, Tiny detector) is not committed yet.
+- `kernels.ts` and `kernels-extra.ts` import each other. Import kernels through `kernels.ts`
+  (or `run.ts`); a file that imports `kernels-extra.ts` first sees an empty kernel table.
+  Helpers that tests need on their own go in a separate file (`src/core/sim/boxes.ts`).
 - PyTorch and Keras are not installed here: exported code can only be syntax-checked
   (`python -m py_compile .cache/forge-export/*.py` after `pnpm test`).
 - In the browser, `window.monaco.editor.getEditors()[0]` gives the code editor (use it to set a

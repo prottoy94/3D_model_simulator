@@ -38,6 +38,8 @@ const GLOBAL_OPS: ReadonlySet<OpKind> = new Set<OpKind>([
   "rnn",
   "lstm",
   "gru",
+  "box_decode",
+  "nms",
 ]);
 
 /** Layers whose inside we do not know, so nothing after them can be computed. */

@@ -25,6 +25,7 @@ const GALLERY_LABELS: Record<string, string> = {
   vgg16: "VGG16",
   "mini-vit": "Mini Vision Transformer",
   firenet: "FireNet",
+  "tiny-detector": "Tiny detector",
 };
 
 /** The model on screen next to another one: the notebook's other models or a gallery model. */

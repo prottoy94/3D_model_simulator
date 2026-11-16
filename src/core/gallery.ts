@@ -3,6 +3,7 @@
  * models written in the Draft format.
  */
 import { draftToWire, parseDraft, type Draft } from "./ai/draft";
+import { WireBuilder } from "./ir/builder";
 import { EXAMPLE_IRS } from "./ir/examples";
 import type { WireIR } from "./ir/wire";
 
@@ -130,7 +131,113 @@ export function fireNetDraft(): Draft {
   return parsed.value;
 }
 
+/**
+ * A small one-stage detector with everything that comes after the heads: anchors,
+ * box decoding, non-maximum suppression and RoI align. It is not a published
+ * model; it exists to show those steps on something small enough to compute.
+ */
+export function tinyDetectorIR(): WireIR {
+  const b = new WireBuilder({
+    title: "Tiny detector",
+    summary:
+      "A small one-stage object detector, made for this gallery. Three convolutions give a 16×16 feature map. Two heads predict, for each of 768 anchor boxes, a score and four offsets. The offsets are applied to the anchors, overlapping boxes are removed, and the features under each remaining box are cut out.",
+    framework: "keras",
+  })
+    .model("m_detector", "Tiny detector", "Backbone, two heads and the steps after them")
+    .node("n_in", "input", { shape: [128, 128, 3] }, { label: "Input 128×128×3", trainable: "n/a" })
+    .group("g_backbone", "Backbone", { kind: "block" });
+
+  let previous = "n_in";
+  [16, 32, 64].forEach((filters, index) => {
+    const id = `n_conv${index + 1}`;
+    b.node(
+      id,
+      "conv2d",
+      { filters, kernel: 3, stride: 2, padding: "same", activation: "relu" },
+      { from: [previous], label: `Conv ${index + 1} · ${filters}@3×3 /2` },
+    );
+    previous = id;
+  });
+
+  b.group("g_heads", "Heads", { kind: "block" })
+    .node(
+      "n_box_head",
+      "conv2d",
+      { filters: 12, kernel: 1 },
+      {
+        from: [previous],
+        label: "Box head · 3 anchors × 4 offsets",
+      },
+    )
+    .node(
+      "n_deltas",
+      "reshape",
+      { shape: [768, 4] },
+      { from: ["n_box_head"], label: "Offsets 768×4" },
+    )
+    .node(
+      "n_cls_head",
+      "conv2d",
+      { filters: 6, kernel: 1 },
+      {
+        from: [previous],
+        label: "Class head · 3 anchors × 2 classes",
+      },
+    )
+    .node(
+      "n_logits",
+      "reshape",
+      { shape: [768, 2] },
+      { from: ["n_cls_head"], label: "Logits 768×2" },
+    )
+    .node("n_scores", "softmax", {}, { from: ["n_logits"], label: "Scores" })
+    .group("g_post", "After the heads", { kind: "block" })
+    .node(
+      "n_anchors",
+      "anchor_generator",
+      { perLocation: 3, stride: 8 },
+      {
+        from: [previous],
+        label: "Anchors · 768 boxes",
+        trainable: "n/a",
+      },
+    )
+    .node(
+      "n_boxes",
+      "box_decode",
+      {},
+      {
+        from: ["n_deltas", "n_anchors"],
+        label: "Decode boxes",
+        trainable: "n/a",
+      },
+    )
+    .node(
+      "n_kept",
+      "nms",
+      { iouThreshold: 0.5, scoreThreshold: 0.05, maxOutput: 20 },
+      {
+        from: ["n_boxes", "n_scores"],
+        label: "NMS · keep K boxes",
+        trainable: "n/a",
+      },
+    )
+    .node(
+      "n_crops",
+      "roi_align",
+      { pooled: 7 },
+      {
+        from: [previous, "n_kept"],
+        label: "RoI align 7×7",
+        trainable: "n/a",
+      },
+    )
+    .outputs("n_kept", "n_crops");
+  return b.build();
+}
+
 export const GALLERY: Record<string, () => WireIR> = {
   ...EXAMPLE_IRS,
   firenet: () => draftToWire(fireNetDraft()),
+  "tiny-detector": tinyDetectorIR,
 };

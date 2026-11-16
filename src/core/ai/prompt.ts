@@ -61,6 +61,11 @@ export const OP_REFERENCE: Record<string, string> = {
   lstm: "units, returnSequences, bidirectional",
   gru: "units, returnSequences, bidirectional",
   anchor_generator: "perLocation (boxes per position), stride. inputs = [feature map]",
+  conv1d: "filters, kernel, stride, padding, dilation, groups, bias, activation (for sequences)",
+  maxpool1d: "pool, stride, padding",
+  roi_align: "pooled [h,w], samplingRatio. inputs = [feature map, boxes (B, R, 4)]",
+  box_decode: "clip. inputs = [predicted offsets (B, N, 4), anchors (B, N, 4)]",
+  nms: "iouThreshold, scoreThreshold, maxOutput. inputs = [boxes (B, N, 4), scores (B, N) or (B, N, classes)]",
   custom:
     "outputShape (without batch), paramCount, description. Only for a layer that fits no op above; also set className",
 };

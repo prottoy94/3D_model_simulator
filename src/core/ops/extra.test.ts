@@ -35,7 +35,7 @@ function run(ir: RuntimeIR): Map<string, NodeResult> {
 
 describe("catalog", () => {
   it("has a complete entry and a prompt line for every op", () => {
-    expect(CATALOG_OPS.length).toBe(45);
+    expect(CATALOG_OPS.length).toBe(50);
     for (const op of CATALOG_OPS) {
       const spec = getOp(op)!;
       expect(spec.title.length, op).toBeGreaterThan(0);
